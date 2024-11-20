@@ -18,3 +18,4 @@ merkle-generator = { git = "https://github.com/ggxchain/transaction-receipt-rela
 alloy-trie = "0.7.4"
 eth-trie-proofs = "0.1.2"
 url = "2.5.3"
+alloy = { version = "0.6.4", features = ["full"] }
