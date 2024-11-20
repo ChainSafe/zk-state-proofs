@@ -31,4 +31,30 @@ async fn zk_verify_real_eth_transaction() {
 }
 ```
 
+## Deep dive 1: Circuit
+The circuit calls the simple merkle proof verification function that depends on the `keccak` precompile:
+
+```rust
+pub fn verify_merkle_proof(root_hash: B256, proof: Vec<Vec<u8>>) {
+    let proof_db = Arc::new(MemoryDB::new(true));
+    for node_encoded in proof.into_iter() {
+        let hash: B256 = digest_keccak(&node_encoded).into();
+        proof_db.insert(hash.as_slice(), node_encoded).unwrap();
+    }
+    let mut trie = EthTrie::from(proof_db, root_hash).expect("Invalid merkle proof");
+    println!("Root from Merkle Proof: {:?}", trie.root_hash().unwrap());
+}
+```
+
+If the merkle proof is invalid for the given root hash the circuit will revert and there will be no valid
+proof.
+
+## Deep dive 2: Ethereum Merkle Trie
+This implementation depends on the [eth_trie](https://crates.io/crates/eth_trie) crate.
+`eth_trie` is a reference implementation of the merkle patricia trie.
+In the `rpc` crate full integration tests for constructing the trie can be found.
+Click [here](https://github.com/jonas089/sp1-eth-tx/blob/master/rpc/src/lib.rs) to review the code.
+
+
+
 
