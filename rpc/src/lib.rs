@@ -11,7 +11,7 @@ mod test {
     use super::load_infura_key_from_env;
     use alloy_primitives::{hex, B256, U256};
     use alloy_rlp::Encodable;
-    use eth_trie::{EthTrie, MemoryDB, Trie};
+    use eth_trie::{EthTrie, MemoryDB, Trie, DB};
     // ethers was deprecated
     // todo: use alloy everywhere
     use alloy::{
@@ -20,6 +20,7 @@ mod test {
         rpc::types::Transaction,
     };
     use eth_trie_proofs::tx_trie::TxsMptHandler;
+    use keccak_hash::keccak;
     use merkle_lib::keccak::digest_keccak;
     use std::{io::Read, str::FromStr, sync::Arc};
     use url::Url;
@@ -89,8 +90,10 @@ mod test {
 
         // todo: check merkle proof
         let proof: Vec<Vec<u8>> = trie.get_proof(&tx_key).unwrap();
-        trie.verify_proof(expected_root, &tx_key, proof)
+        trie.verify_proof(expected_root, &tx_key, proof.clone())
             .expect("Invalid merkle proof");
+
+        verify_merkle_proof(expected_root, proof);
     }
 
     #[tokio::test]
@@ -148,9 +151,39 @@ mod test {
     }
     */
 
+    /*
+
+        fn verify_proof(
+            &self,
+            root_hash: B256,
+            key: &[u8],
+            proof: Vec<Vec<u8>>,
+        ) -> TrieResult<Option<Vec<u8>>> {
+            let proof_db = Arc::new(MemoryDB::new(true));
+            for node_encoded in proof.into_iter() {
+                let hash: B256 = keccak(&node_encoded).as_fixed_bytes().into();
+
+                if root_hash.eq(&hash) || node_encoded.len() >= HASHED_LENGTH {
+                    proof_db.insert(hash.as_slice(), node_encoded).unwrap();
+                }
+            }
+            let trie = EthTrie::from(proof_db, root_hash).or(Err(TrieError::InvalidProof))?;
+            trie.get(key).or(Err(TrieError::InvalidProof))
+        }
+
+    */
+    fn verify_merkle_proof(root_hash: B256, proof: Vec<Vec<u8>>) {
+        let proof_db = Arc::new(MemoryDB::new(true));
+        for node_encoded in proof.into_iter() {
+            let hash: B256 = keccak(&node_encoded).as_fixed_bytes().into();
+            proof_db.insert(hash.as_slice(), node_encoded).unwrap();
+        }
+        let mut trie = EthTrie::from(proof_db, root_hash).expect("Invalid merkle proof");
+        println!("Root from Merkle Proof: {:?}", trie.root_hash().unwrap());
+    }
+
     #[test]
     fn compare_hash_fn() {
-        use keccak_hash::keccak;
         let input: Vec<u8> = vec![0, 0, 0];
         let keccak_hash = keccak(input.clone());
         println!("keccak hash: {:?}", &keccak_hash.as_bytes());
