@@ -8,10 +8,6 @@ default-run = "merkle"
 name = "merkle"
 path = "src/bin/main.rs"
 
-[[bin]]
-name = "evm"
-path = "src/bin/evm.rs"
-
 [dependencies]
 sp1-sdk = "3.0.0"
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
