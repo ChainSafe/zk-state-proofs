@@ -10,7 +10,9 @@ pub fn load_infura_key_from_env() -> String {
 #[cfg(test)]
 mod test {
     use super::load_infura_key_from_env;
+    use alloy_primitives::{hex, B256};
     use eth_trie::{EthTrie, MemoryDB, Trie};
+    use eth_trie_proofs::tx_trie::TxsMptHandler;
     use ethers::{
         providers::{Middleware, Provider},
         types::H256,
@@ -18,6 +20,7 @@ mod test {
     };
     use merkle_lib::keccak::digest_keccak;
     use std::{io::Read, str::FromStr, sync::Arc};
+    use url::Url;
 
     #[test]
     fn test_infura_key() {
@@ -106,7 +109,7 @@ mod test {
         }
 
         let key = 0u64.rlp_bytes().to_vec();
-        let merkle_proof = trie.merkle_proof(key.clone());
+        //let merkle_proof = trie.merkle_proof(key.clone());
     }
 
     #[tokio::test]
@@ -125,16 +128,41 @@ mod test {
             .expect("Block not found!");
 
         let mut builder = alloy_trie::HashBuilder::default();
+        println!("Empty Root: {:?}", &builder.root());
         for (index, tx) in block.transactions.iter().enumerate() {
-            /*let bytes = index.rlp_bytes();
-            println!("bytes: {:?}", &bytes);*/
+            let bytes = alloy_rlp::encode(index);
+            println!("bytes: {:?}", &bytes);
             let nibbles = alloy_trie::Nibbles::unpack(index.to_be_bytes());
             println!("Nibbles: {:?}", &nibbles);
             builder.add_leaf(nibbles, &tx.rlp())
         }
-        let root = builder.root(); // boom
+        let root = builder.root();
         println!("Root: {:?}", &root);
         println!("Expected Root: {:?}", &block.transactions_root);
+    }
+
+    #[tokio::test]
+    async fn test_get_merkle_proof_eth_trie_proofs_lib() {
+        let key = load_infura_key_from_env();
+        println!("Key: {}", key);
+        let rpc_url = "https://mainnet.infura.io/v3/".to_string() + &key;
+
+        let mut txs_mpt_handler = TxsMptHandler::new(Url::parse(&rpc_url).unwrap()).unwrap();
+        txs_mpt_handler
+            .build_tx_tree_from_block(21229780)
+            .await
+            .unwrap();
+
+        // take the hash of the first transaction
+        let target_tx_hash = B256::from(hex!(
+            "9b313a8091203cf49e5ebb519b57952331cc9471bf4043044518dfcfd79f834e"
+        ));
+        println!("Target TX: {}", &target_tx_hash);
+        let tx_index = txs_mpt_handler.tx_hash_to_tx_index(target_tx_hash).unwrap();
+        let proof = txs_mpt_handler.get_proof(tx_index).unwrap();
+        txs_mpt_handler
+            .verify_proof(tx_index, proof.clone())
+            .unwrap();
     }
 
     #[test]
