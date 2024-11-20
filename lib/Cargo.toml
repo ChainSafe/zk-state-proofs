@@ -8,3 +8,7 @@ alloy-sol-types = { workspace = true }
 tiny-keccak = { git = "https://github.com/sp1-patches/tiny-keccak", features = [
     "keccak",
 ] }
+alloy-primitives = "0.8.12"
+eth_trie = "0.5.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

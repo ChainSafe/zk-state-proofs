@@ -4066,7 +4066,11 @@ dependencies = [
 name = "merkle-lib"
 version = "0.1.0"
 dependencies = [
+ "alloy-primitives 0.8.12",
  "alloy-sol-types 0.7.7",
+ "eth_trie 0.5.0",
+ "serde",
+ "serde_json",
  "tiny-keccak 2.0.2 (git+https://github.com/sp1-patches/tiny-keccak)",
 ]
 
@@ -4076,6 +4080,7 @@ version = "0.1.0"
 dependencies = [
  "alloy-sol-types 0.7.7",
  "merkle-lib",
+ "serde_json",
  "sp1-zkvm",
 ]
 
@@ -4087,10 +4092,12 @@ dependencies = [
  "clap",
  "hex",
  "merkle-lib",
+ "rpc",
  "serde",
  "serde_json",
  "sp1-helper",
  "sp1-sdk",
+ "tokio",
  "tracing",
 ]
 
@@ -5584,6 +5591,8 @@ dependencies = [
  "keccak-hash",
  "merkle-generator",
  "merkle-lib",
+ "serde",
+ "serde_json",
  "tokio",
  "url",
 ]
