@@ -1,0 +1,1 @@
+cd program && cargo prove build
