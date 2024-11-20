@@ -8,7 +8,7 @@
 
 ## Prove a real Ethereum mainnet Transaction in ZK
 
-`cargo test zk_verify_real_eth_transaction`:
+`cd script && cargo test zk_verify_real_eth_transaction --release`:
 
 ```rust
 #[tokio::test]
