@@ -1,7 +1,6 @@
 // get transaction merkle proof from Ethereum
 use dotenv::dotenv;
 use std::env;
-
 pub fn load_infura_key_from_env() -> String {
     dotenv().ok();
     env::var("INFURA").expect("Missing Infura API key!")
@@ -10,11 +9,16 @@ pub fn load_infura_key_from_env() -> String {
 #[cfg(test)]
 mod test {
     use super::load_infura_key_from_env;
-    use alloy_primitives::{hex, B256};
+    use alloy_primitives::{hex, B256, U256};
+    use alloy_rlp::Encodable;
     use eth_trie::{EthTrie, MemoryDB, Trie};
     // ethers was deprecated
     // todo: use alloy everywhere
-    use alloy::providers::{Provider, ProviderBuilder};
+    use alloy::{
+        consensus::{BlockHeader, TxEnvelope, TxLegacy},
+        providers::{Provider, ProviderBuilder},
+        rpc::types::Transaction,
+    };
     use eth_trie_proofs::tx_trie::TxsMptHandler;
     use merkle_lib::keccak::digest_keccak;
     use std::{io::Read, str::FromStr, sync::Arc};
@@ -32,9 +36,8 @@ mod test {
         println!("Key: {}", key);
         let rpc_url = "https://mainnet.infura.io/v3/".to_string() + &key;
         let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
-        // works with
         let block_hash = "0x8230bd00f36e52e68dd4a46bfcddeceacbb689d808327f4c76dbdf8d33d58ca8";
-        // does not work with
+        // another block
         // 0xfa2459292cc258e554940516cd4dc12beb058a5640d0c4f865aa106db0354dfa
 
         let block = provider
@@ -50,21 +53,44 @@ mod test {
         let mut trie = EthTrie::new(memdb.clone());
 
         for (index, tx) in block.transactions.txns().enumerate() {
-            println!("Transaction: {:?}", &tx);
-            trie.insert(
-                &alloy_rlp::encode(index),
-                &alloy_rlp::encode(tx.inner.clone()),
-            )
-            .expect("Failed to insert");
+            let path = alloy_rlp::encode(index);
+            let mut encoded_tx = vec![];
+            match &tx.inner {
+                // Legacy transactions have no difference between network and 2718
+                TxEnvelope::Legacy(tx) => tx.eip2718_encode(&mut encoded_tx),
+                TxEnvelope::Eip2930(tx) => {
+                    tx.eip2718_encode(&mut encoded_tx);
+                }
+                TxEnvelope::Eip1559(tx) => {
+                    tx.eip2718_encode(&mut encoded_tx);
+                }
+                TxEnvelope::Eip4844(tx) => {
+                    tx.eip2718_encode(&mut encoded_tx);
+                }
+                TxEnvelope::Eip7702(tx) => {
+                    tx.eip2718_encode(&mut encoded_tx);
+                }
+                _ => panic!("Unsupported transaction type"),
+            }
+            trie.insert(&path, &encoded_tx).expect("Failed to insert");
+            println!(
+                "index {:?}: {:?}",
+                hex::encode(path),
+                hex::encode(encoded_tx)
+            );
         }
         let trie_root = trie.root_hash().unwrap();
-        println!("Transaction Root raw: {}", &trie_root);
+        let expected_root = block.header.transactions_root;
+        println!("Expected Root: {:?}", &expected_root);
+        println!("Actual Root: {:?}", &trie_root);
 
         let tx_index = 0u64;
         let tx_key = tx_index.to_be_bytes();
 
         // todo: check merkle proof
-        let _proof = trie.get_proof(&tx_key).unwrap();
+        let proof: Vec<Vec<u8>> = trie.get_proof(&tx_key).unwrap();
+        trie.verify_proof(expected_root, &tx_key, proof)
+            .expect("Invalid merkle proof");
     }
 
     #[tokio::test]
