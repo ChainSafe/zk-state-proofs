@@ -9,7 +9,9 @@ tokio = { version = "1.4.11", features = ["full"] }
 ethers = "2.0.14"
 eth_trie = "0.5.0"
 merkle-lib = { path = "../lib" }
-alloy-rlp = { version = "0.3.2", default-features = false, features = [
+alloy-rlp = { version = "0.3.9", default-features = false, features = [
     "derive",
 ] }
 keccak-hash = "0.10.0"
+merkle-generator = { git = "https://github.com/ggxchain/transaction-receipt-relayer" }
+alloy-trie = "0.7.4"

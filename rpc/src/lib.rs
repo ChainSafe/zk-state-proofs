@@ -9,17 +9,15 @@ pub fn load_infura_key_from_env() -> String {
 
 #[cfg(test)]
 mod test {
-    use std::{hash::Hash, io::Read, str::FromStr, sync::Arc};
-
     use super::load_infura_key_from_env;
     use eth_trie::{EthTrie, MemoryDB, Trie};
     use ethers::{
         providers::{Middleware, Provider},
         types::H256,
-        utils::rlp::{self, RlpStream},
+        utils::rlp::Encodable,
     };
-    use keccak_hash::keccak;
     use merkle_lib::keccak::digest_keccak;
+    use std::{io::Read, str::FromStr, sync::Arc};
 
     #[test]
     fn test_infura_key() {
@@ -33,8 +31,10 @@ mod test {
         println!("Key: {}", key);
         let rpc_url = "https://mainnet.infura.io/v3/".to_string() + &key;
         let provider = Provider::try_from(rpc_url).expect("Failed to construct provider!");
-        let block_hash = "0xc32470c2459fd607246412e23b4b4d19781c1fa24a603d47a5bc066be3b5c0af";
-        let untrusted_hash = "0xacb81623523bbabccb1638a907686bc2f3229c70e3ab51777bef0a635f3ac03f";
+        // works with
+        let block_hash = "0x8230bd00f36e52e68dd4a46bfcddeceacbb689d808327f4c76dbdf8d33d58ca8";
+        // does not work with
+        // 0xfa2459292cc258e554940516cd4dc12beb058a5640d0c4f865aa106db0354dfa
 
         let block = provider
             .get_block_with_txs(H256::from_str(block_hash).unwrap())
@@ -44,36 +44,102 @@ mod test {
 
         let memdb = Arc::new(MemoryDB::new(true));
         let mut trie = EthTrie::new(memdb.clone());
+
         for (index, tx) in block.transactions.iter().enumerate() {
-            let serialized_tx = tx.rlp();
-            trie.insert(&alloy_rlp::encode(index), &serialized_tx)
+            trie.insert(&index.rlp_bytes(), &tx.rlp())
                 .expect("Failed to insert");
+            println!("index {}: {:?}", index, index.rlp_bytes());
         }
 
-        let tx_index = block
-            .transactions
-            .iter()
-            .position(|tx| tx.hash == H256::from_str(untrusted_hash).unwrap())
-            .ok_or("Transaction not found in block")
-            .unwrap();
-        let tx_key = tx_index.to_be_bytes();
-        let proof = trie.get_proof(&tx_key).unwrap();
+        println!("transaction count: {}", block.transactions.len());
+
         let transaction_root = block.transactions_root;
         println!(
             "Expected Transaction Root: {:?}",
             &transaction_root.as_bytes()
         );
         let trie_root = trie.root_hash().unwrap();
-        println!("Trie root: {:?}", &trie_root.bytes());
+
+        println!("Transaction Root raw: {}", &block.transactions_root);
+        println!("Transaction Root raw: {}", &trie_root);
+        assert_eq!(trie_root.to_vec(), transaction_root.as_bytes());
+
+        /*let tx_index = block
+        .transactions
+        .iter()
+        .position(|tx| tx.hash == H256::from_str(untrusted_hash).unwrap())
+        .ok_or("Transaction not found in block")
+        .unwrap();*/
+
+        let tx_index = 0u64;
+        let tx_key = tx_index.to_be_bytes();
+        let proof = trie.get_proof(&tx_key).unwrap();
 
         println!(
             "Root from Proof: {:?}",
             &digest_keccak(proof.first().unwrap()).bytes()
         )
+        // Trie potentially flawed, see https://github.com/ethereum/eth-trie.rs/issues/4
     }
+
+    #[tokio::test]
+    async fn test_get_merkle_proof_ggx() {
+        use merkle_generator::IterativeTrie;
+        let mut trie = merkle_generator::PatriciaTrie::new();
+
+        let key = load_infura_key_from_env();
+        println!("Key: {}", key);
+        let rpc_url = "https://mainnet.infura.io/v3/".to_string() + &key;
+        let provider = Provider::try_from(rpc_url).expect("Failed to construct provider!");
+        let block_hash = "0xfa2459292cc258e554940516cd4dc12beb058a5640d0c4f865aa106db0354dfa";
+        //let untrusted_hash = "0xacb81623523bbabccb1638a907686bc2f3229c70e3ab51777bef0a635f3ac03f";
+
+        let block = provider
+            .get_block_with_txs(H256::from_str(block_hash).unwrap())
+            .await
+            .expect("Failed to get Block!")
+            .expect("Block not found!");
+
+        for (index, tx) in block.transactions.iter().enumerate() {
+            trie.insert(index.rlp_bytes().to_vec(), tx.rlp().to_vec());
+            println!("index {}: {:?}", index, index.rlp_bytes());
+        }
+
+        let key = 0u64.rlp_bytes().to_vec();
+        let merkle_proof = trie.merkle_proof(key.clone());
+    }
+
+    #[tokio::test]
+    async fn test_get_merkle_proof_alloy() {
+        let key = load_infura_key_from_env();
+        println!("Key: {}", key);
+        let rpc_url = "https://mainnet.infura.io/v3/".to_string() + &key;
+        let provider = Provider::try_from(rpc_url).expect("Failed to construct provider!");
+        let block_hash = "0x8230bd00f36e52e68dd4a46bfcddeceacbb689d808327f4c76dbdf8d33d58ca8";
+        //let untrusted_hash = "0xacb81623523bbabccb1638a907686bc2f3229c70e3ab51777bef0a635f3ac03f";
+
+        let block = provider
+            .get_block_with_txs(H256::from_str(block_hash).unwrap())
+            .await
+            .expect("Failed to get Block!")
+            .expect("Block not found!");
+
+        let mut builder = alloy_trie::HashBuilder::default();
+        for (index, tx) in block.transactions.iter().enumerate() {
+            /*let bytes = index.rlp_bytes();
+            println!("bytes: {:?}", &bytes);*/
+            let nibbles = alloy_trie::Nibbles::unpack(index.to_be_bytes());
+            println!("Nibbles: {:?}", &nibbles);
+            builder.add_leaf(nibbles, &tx.rlp())
+        }
+        let root = builder.root(); // boom
+        println!("Root: {:?}", &root);
+        println!("Expected Root: {:?}", &block.transactions_root);
+    }
+
     #[test]
     fn compare_hash_fn() {
-        use keccak_hash::{keccak, H256};
+        use keccak_hash::keccak;
         let input: Vec<u8> = vec![0, 0, 0];
         let keccak_hash = keccak(input.clone());
         println!("keccak hash: {:?}", &keccak_hash.as_bytes());
