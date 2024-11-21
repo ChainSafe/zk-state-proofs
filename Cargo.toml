@@ -1,8 +1,10 @@
 [workspace]
 members = [
     "lib",
-    "program", "rpc",
-    "script",
+    "program-tx-merkle",
+    "program-tx-recursive",
+    "trie-utils",
+    "script-tx-merkle",
 ]
 resolver = "2"
 

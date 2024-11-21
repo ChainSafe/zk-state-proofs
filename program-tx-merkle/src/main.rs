@@ -10,6 +10,5 @@ pub fn main() {
         merkle_proof.proof.clone(),
         &merkle_proof.key,
     );
-
     sp1_zkvm::io::commit_slice(&output);
 }

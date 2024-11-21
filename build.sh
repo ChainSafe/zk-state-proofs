@@ -1,1 +1,1 @@
-cd program && cargo prove build
+cd program-tx-merkle && cargo prove build
