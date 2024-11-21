@@ -1,11 +1,16 @@
 use alloy::{
     consensus::TxEnvelope,
+    primitives::{Address, B256},
     providers::{Provider, ProviderBuilder},
+    rpc::types::BlockTransactionsKind,
 };
-use alloy_primitives::B256;
 // get transaction merkle proof from Ethereum
+pub use alloy::eips::eip2718::{Eip2718Envelope, Encodable2718};
+
+use alloy_rlp::{BufMut, Encodable};
 use dotenv::dotenv;
 use eth_trie::{EthTrie, MemoryDB, Trie};
+use keccak_hash::H256;
 use merkle_lib::MerkleProofInput;
 use std::{env, str::FromStr, sync::Arc};
 use url::Url;
@@ -26,7 +31,7 @@ pub async fn get_proof_for_transaction() -> MerkleProofInput {
     let block = provider
         .get_block_by_hash(
             B256::from_str(block_hash).unwrap(),
-            alloy::rpc::types::BlockTransactionsKind::Full,
+            BlockTransactionsKind::Full,
         )
         .await
         .expect("Failed to get Block!")
@@ -80,17 +85,25 @@ pub async fn get_proof_for_transaction() -> MerkleProofInput {
 
 #[cfg(test)]
 mod test {
+
+    use crate::Log;
+
     use super::load_infura_key_from_env;
-    use alloy_primitives::{hex, B256};
+    use alloy::{
+        consensus::{ReceiptEnvelope, TxEnvelope, TxReceipt},
+        dyn_abi::abi::encode,
+        hex::{self, FromHex},
+        primitives::{Address, Bloom, B256},
+        providers::{Provider, ProviderBuilder},
+        rpc::types::TransactionReceipt,
+        signers::k256::FieldBytes,
+    };
+    use alloy_rlp::Encodable;
     use eth_trie::{EthTrie, MemoryDB, Trie, DB};
     // ethers was deprecated
     // todo: use alloy everywhere
-    use alloy::{
-        consensus::TxEnvelope,
-        providers::{Provider, ProviderBuilder},
-    };
-    use eth_trie_proofs::tx_trie::TxsMptHandler;
-    use keccak_hash::keccak;
+    //use eth_trie_proofs::tx_trie::TxsMptHandler;
+    use keccak_hash::{keccak, H256};
     use merkle_lib::keccak::digest_keccak;
     use std::{str::FromStr, sync::Arc};
     use url::Url;
@@ -148,11 +161,12 @@ mod test {
         let trie_root = trie.root_hash().unwrap();
         let expected_root = block.header.transactions_root;
 
-        let tx_index = 0u64;
+        let tx_index = 15u64;
         let tx_key = alloy_rlp::encode(tx_index);
 
         // todo: check merkle proof
         let proof: Vec<Vec<u8>> = trie.get_proof(&tx_key).unwrap();
+
         trie.verify_proof(expected_root, &tx_key, proof.clone())
             .expect("Invalid merkle proof");
 
@@ -165,28 +179,13 @@ mod test {
         );
     }
 
-    #[tokio::test]
-    async fn test_get_merkle_proof_eth_trie_proofs_lib() {
-        let key = load_infura_key_from_env();
-        println!("Key: {}", key);
-        let rpc_url = "https://mainnet.infura.io/v3/".to_string() + &key;
-
-        let mut txs_mpt_handler = TxsMptHandler::new(Url::parse(&rpc_url).unwrap()).unwrap();
-        txs_mpt_handler
-            .build_tx_tree_from_block(21229780)
-            .await
-            .unwrap();
-
-        // take the hash of the first transaction
-        let target_tx_hash = B256::from(hex!(
-            "9b313a8091203cf49e5ebb519b57952331cc9471bf4043044518dfcfd79f834e"
-        ));
-        println!("Target TX: {}", &target_tx_hash);
-        let tx_index = txs_mpt_handler.tx_hash_to_tx_index(target_tx_hash).unwrap();
-        let proof = txs_mpt_handler.get_proof(tx_index).unwrap();
-        txs_mpt_handler
-            .verify_proof(tx_index, proof.clone())
-            .unwrap();
+    #[test]
+    fn compare_hash_fn() {
+        let input: Vec<u8> = vec![0, 0, 0];
+        let keccak_hash = keccak(input.clone());
+        println!("keccak hash: {:?}", &keccak_hash.as_bytes());
+        let sha3_hash = digest_keccak(&input);
+        println!("sha3 hash: {:?}", &sha3_hash);
     }
 
     fn verify_merkle_proof(root_hash: B256, proof: Vec<Vec<u8>>, key: &[u8]) -> Vec<u8> {
@@ -200,25 +199,93 @@ mod test {
         trie.verify_proof(root_hash, key, proof)
             .expect("Failed to verify Merkle Proof")
             .expect("Key does not exist!")
+    }
 
-        /*for node_rlp in proof.into_iter().rev() {
-            let node = decode_node(&mut node_rlp.as_slice()).expect("Failed to decode node");
-            let recomputed_hash: B256 = digest_keccak(&node_rlp).into();
-            match node {
-                Node::Extension(_) => {}
-                Node::Branch(_) => {}
-                Node::Leaf(_) => {}
+    #[tokio::test]
+    async fn test_verify_receipt_merkle_proof() {
+        let key = load_infura_key_from_env();
+        println!("Key: {}", key);
+        let rpc_url = "https://mainnet.infura.io/v3/".to_string() + &key;
+        let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
+        let block_hash = "0x8230bd00f36e52e68dd4a46bfcddeceacbb689d808327f4c76dbdf8d33d58ca8";
+        // another block
+        // 0xfa2459292cc258e554940516cd4dc12beb058a5640d0c4f865aa106db0354dfa
+        let block_hash_b256 = B256::from_str(block_hash).unwrap();
+        let block = provider
+            .get_block_by_hash(
+                block_hash_b256,
+                alloy::rpc::types::BlockTransactionsKind::Full,
+            )
+            .await
+            .expect("Failed to get Block!")
+            .expect("Block not found!");
+
+        let receipts: Vec<TransactionReceipt> = provider
+            .get_block_receipts(alloy::eips::BlockId::Hash(block_hash_b256.into()))
+            .await
+            .unwrap()
+            .unwrap();
+
+        let memdb = Arc::new(MemoryDB::new(true));
+        let trie = EthTrie::new(memdb.clone());
+        for receipt in receipts {
+            let inner: ReceiptEnvelope<alloy::rpc::types::Log> = receipt.inner;
+            match inner {
+                ReceiptEnvelope::Eip1559(r) => {
+                    let status = alloy_rlp::encode(r.status());
+                    let cumulative_gas_used = alloy_rlp::encode(r.cumulative_gas_used());
+                    let bloom = alloy_rlp::encode(r.logs_bloom);
+                    println!("{:?}", r.logs().first().unwrap().address())
+
+                    /*let list_encode: [&dyn Encodable; 4] =
+                    [&status, &cumulative_gas_used, &bloom, &r.receipt.logs];*/
+                    //alloy_rlp::encode_list::<_, dyn Encodable>(&list_encode, out);
+                }
+                ReceiptEnvelope::Eip2930(r) => {}
+                ReceiptEnvelope::Eip4844(r) => {}
+                ReceiptEnvelope::Eip7702(r) => {}
+                ReceiptEnvelope::Legacy(r) => {}
                 _ => {}
             }
-        }*/
+        }
     }
 
     #[test]
-    fn compare_hash_fn() {
-        let input: Vec<u8> = vec![0, 0, 0];
-        let keccak_hash = keccak(input.clone());
-        println!("keccak hash: {:?}", &keccak_hash.as_bytes());
-        let sha3_hash = digest_keccak(&input);
-        println!("sha3 hash: {:?}", &sha3_hash);
+    fn test_encode_receipt() {
+        let expected = hex::decode("f901668001b9010000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000f85ff85d940000000000000000000000000000000000000011f842a0000000000000000000000000000000000000000000000000000000000000deada0000000000000000000000000000000000000000000000000000000000000beef830100ff").unwrap();
+        let status = false;
+        let cumulative_gas = 0x1u64;
+        let bloom = Bloom::new([0; 256]);
+        let logs: Vec<Log> = vec![Log {
+            address: Address::from_hex("0000000000000000000000000000000000000011").unwrap(),
+            topics: vec![
+                hex::decode("000000000000000000000000000000000000000000000000000000000000dead")
+                    .unwrap()
+                    .to_vec(),
+                hex::decode("000000000000000000000000000000000000000000000000000000000000beef")
+                    .unwrap()
+                    .to_vec(),
+            ],
+            data: hex::decode("0100ff").unwrap().to_vec(),
+        }];
+
+        let list_encode: [&dyn Encodable; 4] = [&status, &cumulative_gas, &bloom, &logs];
+        let mut out: Vec<u8> = Vec::new();
+        alloy_rlp::encode_list::<_, dyn Encodable>(&list_encode, &mut out);
+        println!("Result: {:?}", &out);
+        //println!("Expectation: {:?}", &expected);
+    }
+}
+
+pub struct Log {
+    pub address: Address,
+    pub topics: Vec<Vec<u8>>,
+    pub data: Vec<u8>,
+}
+
+impl Encodable for Log {
+    fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
+        let list_encode: [&dyn Encodable; 3] = [&self.address, &self.topics, &self.data];
+        alloy_rlp::encode_list::<_, dyn Encodable>(&list_encode, out)
     }
 }

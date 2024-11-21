@@ -6,19 +6,14 @@ edition = "2021"
 [dependencies]
 dotenv = "0.15.0"
 tokio = { version = "1.4.11", features = ["full"] }
-ethers = "2.0.14"
 eth_trie = "0.5.0"
 merkle-lib = { path = "../lib" }
-alloy-rlp = { version = "0.3.9", default-features = false, features = [
-    "derive",
-] }
-alloy-primitives = { version = "0.8.6", features = ["serde"] }
 keccak-hash = "0.10.0"
 merkle-generator = { git = "https://github.com/ggxchain/transaction-receipt-relayer" }
-alloy-trie = "0.7.4"
-eth-trie-proofs = "0.1.2"
+#eth-trie-proofs = "0.1.2"
 url = "2.5.3"
-alloy = { version = "0.6.4", features = ["full"] }
-
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+alloy = { version = "0.6.4", features = ["full"] }
+alloy-trie = "0.7.4"
+alloy-rlp = { version = "0.3.9" }
