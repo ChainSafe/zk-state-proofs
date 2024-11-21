@@ -1,12 +1,11 @@
 use alloy::{
-    consensus::TxEnvelope,
+    consensus::{ReceiptWithBloom, TxEnvelope, TxReceipt},
     primitives::{Address, B256},
     providers::{Provider, ProviderBuilder},
     rpc::types::BlockTransactionsKind,
 };
 // get transaction merkle proof from Ethereum
 pub use alloy::eips::eip2718::{Eip2718Envelope, Encodable2718};
-
 use alloy_rlp::{Encodable, RlpEncodableWrapper};
 use dotenv::dotenv;
 use eth_trie::{EthTrie, MemoryDB, Trie};
@@ -87,25 +86,24 @@ pub async fn get_proof_for_transaction() -> MerkleProofInput {
 mod test {
 
     use crate::{Log, H256};
+    use alloy::{consensus::TxReceipt, rpc::types::Log as AlloyLog};
 
     use super::load_infura_key_from_env;
     use alloy::{
-        consensus::{ReceiptEnvelope, TxEnvelope, TxReceipt},
-        dyn_abi::abi::encode,
+        consensus::{ReceiptEnvelope, ReceiptWithBloom, TxEnvelope},
         hex::{self, FromHex},
         primitives::{Address, Bloom, B256},
         providers::{Provider, ProviderBuilder},
         rpc::types::TransactionReceipt,
-        signers::k256::FieldBytes,
     };
-    use alloy_rlp::Encodable;
+    use alloy_rlp::{BufMut, Encodable};
     use eth_trie::{EthTrie, MemoryDB, Trie, DB};
     // ethers was deprecated
     // todo: use alloy everywhere
     //use eth_trie_proofs::tx_trie::TxsMptHandler;
     use keccak_hash::keccak;
     use merkle_lib::keccak::digest_keccak;
-    use std::{str::FromStr, sync::Arc};
+    use std::{io::Read, str::FromStr, sync::Arc};
     use url::Url;
 
     #[test]
@@ -211,9 +209,10 @@ mod test {
         // another block
         // 0xfa2459292cc258e554940516cd4dc12beb058a5640d0c4f865aa106db0354dfa
         let block_hash_b256 = B256::from_str(block_hash).unwrap();
+
         let block = provider
             .get_block_by_hash(
-                block_hash_b256,
+                B256::from_str(block_hash).unwrap(),
                 alloy::rpc::types::BlockTransactionsKind::Full,
             )
             .await
@@ -227,27 +226,42 @@ mod test {
             .unwrap();
 
         let memdb = Arc::new(MemoryDB::new(true));
-        let trie = EthTrie::new(memdb.clone());
-        for receipt in receipts {
+        let mut trie = EthTrie::new(memdb.clone());
+        for (index, receipt) in receipts.into_iter().enumerate() {
             let inner: ReceiptEnvelope<alloy::rpc::types::Log> = receipt.inner;
+            let mut out: Vec<u8> = Vec::new();
+            let index_encoded = alloy_rlp::encode(index);
             match inner {
-                ReceiptEnvelope::Eip1559(r) => {
-                    let status = alloy_rlp::encode(r.status());
-                    let cumulative_gas_used = alloy_rlp::encode(r.cumulative_gas_used());
-                    let bloom = alloy_rlp::encode(r.logs_bloom);
-                    println!("{:?}", r.logs().first().unwrap().address())
-
-                    /*let list_encode: [&dyn Encodable; 4] =
-                    [&status, &cumulative_gas_used, &bloom, &r.receipt.logs];*/
-                    //alloy_rlp::encode_list::<_, dyn Encodable>(&list_encode, out);
+                ReceiptEnvelope::Eip2930(r) => {
+                    out.put_u8(0x01);
+                    insert_receipt(r, &mut trie, index_encoded);
                 }
-                ReceiptEnvelope::Eip2930(r) => {}
-                ReceiptEnvelope::Eip4844(r) => {}
-                ReceiptEnvelope::Eip7702(r) => {}
-                ReceiptEnvelope::Legacy(r) => {}
-                _ => {}
+                ReceiptEnvelope::Eip1559(r) => {
+                    out.put_u8(0x02);
+                    insert_receipt(r, &mut trie, index_encoded);
+                }
+                ReceiptEnvelope::Eip4844(r) => {
+                    out.put_u8(0x03);
+                    insert_receipt(r, &mut trie, index_encoded);
+                }
+                ReceiptEnvelope::Eip7702(r) => {
+                    out.put_u8(0x04);
+                    insert_receipt(r, &mut trie, index_encoded);
+                }
+                ReceiptEnvelope::Legacy(r) => {
+                    insert_receipt(r, &mut trie, index_encoded);
+                }
+                _ => {
+                    eprintln!("Critical: Unknown Receipt Type")
+                }
             }
         }
+        println!(
+            "Expected Trie Root: {:?}",
+            &block.header.receipts_root.bytes()
+        );
+        println!("Trie Root Result: {:?}", &trie.root_hash().unwrap().bytes());
+        assert_eq!(&block.header.receipts_root, &trie.root_hash().unwrap())
     }
 
     #[test]
@@ -285,6 +299,35 @@ mod test {
         println!("Result: {:?}", &out);
         println!("Expectation: {:?}", &expected);
         assert_eq!(out, expected);
+    }
+
+    fn insert_receipt(
+        r: ReceiptWithBloom<AlloyLog>,
+        trie: &mut EthTrie<MemoryDB>,
+        index_encoded: Vec<u8>,
+    ) {
+        let status = alloy_rlp::encode(r.status());
+        let cumulative_gas_used = alloy_rlp::encode(r.cumulative_gas_used());
+        let bloom = alloy_rlp::encode(r.logs_bloom);
+
+        let mut logs: Vec<Log> = Vec::new();
+
+        for l in r.logs() {
+            let mut topics: Vec<H256> = Vec::new();
+            for t in l.topics() {
+                topics.push(H256::from_slice(t.as_ref()));
+            }
+            logs.push(Log {
+                address: l.address(),
+                topics,
+                data: l.data().data.to_vec(),
+            });
+        }
+
+        let list_encode: [&dyn Encodable; 4] = [&status, &cumulative_gas_used, &bloom, &logs];
+        let mut out: Vec<u8> = Vec::new();
+        alloy_rlp::encode_list::<_, dyn Encodable>(&list_encode, &mut out);
+        trie.insert(&index_encoded, &out).expect("Failed to insert");
     }
 }
 
