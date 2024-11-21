@@ -7,12 +7,13 @@ use alloy::{
 // get transaction merkle proof from Ethereum
 pub use alloy::eips::eip2718::{Eip2718Envelope, Encodable2718};
 
-use alloy_rlp::{BufMut, Encodable, RlpEncodableWrapper};
+use alloy_rlp::{Encodable, RlpEncodableWrapper};
 use dotenv::dotenv;
 use eth_trie::{EthTrie, MemoryDB, Trie};
 use merkle_lib::MerkleProofInput;
 use std::{env, str::FromStr, sync::Arc};
 use url::Url;
+mod macros;
 pub fn load_infura_key_from_env() -> String {
     dotenv().ok();
     env::var("INFURA").expect("Missing Infura API key!")
@@ -315,25 +316,6 @@ impl Encodable for Log {
     }
 }
 
-#[macro_export]
-macro_rules! encode {
-    ($out:ident, $e:expr) => {
-        $e.encode($out);
-        #[cfg(feature = "debug")]
-        {
-            let mut vec = vec![];
-            $e.encode(&mut vec);
-            println!("{}: {:?}", stringify!($e), vec);
-        }
-
-    };
-    ($out:ident, $e:expr, $($others:expr),+) => {
-        {
-            encode!($out, $e);
-            encode!($out, $($others),+);
-        }
-    };
-}
 #[derive(Debug, RlpEncodableWrapper, PartialEq, Clone)]
 pub struct H256(pub [u8; 32]);
 
