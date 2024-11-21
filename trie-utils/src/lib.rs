@@ -7,10 +7,9 @@ use alloy::{
 // get transaction merkle proof from Ethereum
 pub use alloy::eips::eip2718::{Eip2718Envelope, Encodable2718};
 
-use alloy_rlp::{BufMut, Encodable};
+use alloy_rlp::{BufMut, Encodable, RlpEncodableWrapper};
 use dotenv::dotenv;
 use eth_trie::{EthTrie, MemoryDB, Trie};
-use keccak_hash::H256;
 use merkle_lib::MerkleProofInput;
 use std::{env, str::FromStr, sync::Arc};
 use url::Url;
@@ -86,7 +85,7 @@ pub async fn get_proof_for_transaction() -> MerkleProofInput {
 #[cfg(test)]
 mod test {
 
-    use crate::Log;
+    use crate::{Log, H256};
 
     use super::load_infura_key_from_env;
     use alloy::{
@@ -103,7 +102,7 @@ mod test {
     // ethers was deprecated
     // todo: use alloy everywhere
     //use eth_trie_proofs::tx_trie::TxsMptHandler;
-    use keccak_hash::{keccak, H256};
+    use keccak_hash::keccak;
     use merkle_lib::keccak::digest_keccak;
     use std::{str::FromStr, sync::Arc};
     use url::Url;
@@ -259,12 +258,18 @@ mod test {
         let logs: Vec<Log> = vec![Log {
             address: Address::from_hex("0000000000000000000000000000000000000011").unwrap(),
             topics: vec![
-                hex::decode("000000000000000000000000000000000000000000000000000000000000dead")
-                    .unwrap()
-                    .to_vec(),
-                hex::decode("000000000000000000000000000000000000000000000000000000000000beef")
-                    .unwrap()
-                    .to_vec(),
+                H256::from_slice(
+                    &hex::decode(
+                        "000000000000000000000000000000000000000000000000000000000000dead",
+                    )
+                    .unwrap(),
+                ),
+                H256::from_slice(
+                    &hex::decode(
+                        "000000000000000000000000000000000000000000000000000000000000beef",
+                    )
+                    .unwrap(),
+                ),
             ],
             data: hex::decode("0100ff").unwrap().to_vec(),
         }];
@@ -272,20 +277,73 @@ mod test {
         let list_encode: [&dyn Encodable; 4] = [&status, &cumulative_gas, &bloom, &logs];
         let mut out: Vec<u8> = Vec::new();
         alloy_rlp::encode_list::<_, dyn Encodable>(&list_encode, &mut out);
+
+        let mut o: Vec<u8> = Vec::new();
+        logs.encode(&mut o);
+        println!("Outputs: {:?}", &o);
         println!("Result: {:?}", &out);
-        //println!("Expectation: {:?}", &expected);
+        println!("Expectation: {:?}", &expected);
+        assert_eq!(out, expected);
     }
 }
 
 pub struct Log {
     pub address: Address,
-    pub topics: Vec<Vec<u8>>,
+    pub topics: Vec<H256>,
     pub data: Vec<u8>,
+}
+
+impl Log {
+    fn rlp_header(&self) -> alloy_rlp::Header {
+        let payload_length =
+            self.address.length() + self.topics.length() + self.data.as_slice().length();
+        alloy_rlp::Header {
+            list: true,
+            payload_length,
+        }
+    }
 }
 
 impl Encodable for Log {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
-        let list_encode: [&dyn Encodable; 3] = [&self.address, &self.topics, &self.data];
-        alloy_rlp::encode_list::<_, dyn Encodable>(&list_encode, out)
+        let header = self.rlp_header();
+        encode!(out, header, self.address, self.topics, self.data.as_slice());
+    }
+    fn length(&self) -> usize {
+        let rlp_head = self.rlp_header();
+        alloy_rlp::length_of_length(rlp_head.payload_length) + rlp_head.payload_length
+    }
+}
+
+#[macro_export]
+macro_rules! encode {
+    ($out:ident, $e:expr) => {
+        $e.encode($out);
+        #[cfg(feature = "debug")]
+        {
+            let mut vec = vec![];
+            $e.encode(&mut vec);
+            println!("{}: {:?}", stringify!($e), vec);
+        }
+
+    };
+    ($out:ident, $e:expr, $($others:expr),+) => {
+        {
+            encode!($out, $e);
+            encode!($out, $($others),+);
+        }
+    };
+}
+#[derive(Debug, RlpEncodableWrapper, PartialEq, Clone)]
+pub struct H256(pub [u8; 32]);
+
+impl H256 {
+    pub fn zero() -> Self {
+        Self([0u8; 32])
+    }
+    pub fn from_slice(slice: &[u8]) -> Self {
+        let mut bytes = [0u8; 32];
+        bytes[..slice.len()].copy_from_slice(slice);
+        Self(bytes)
     }
 }
