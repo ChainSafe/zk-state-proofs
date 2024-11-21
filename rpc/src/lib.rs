@@ -63,7 +63,7 @@ pub async fn get_proof_for_transaction() -> MerkleProofInput {
     println!("Actual Root: {:?}", &trie_root);
 
     let tx_index = 0u64;
-    let tx_key = tx_index.to_be_bytes();
+    let tx_key = alloy_rlp::encode(tx_index);
 
     // todo: check merkle proof
     let proof: Vec<Vec<u8>> = trie.get_proof(&tx_key).unwrap();
@@ -74,6 +74,7 @@ pub async fn get_proof_for_transaction() -> MerkleProofInput {
     MerkleProofInput {
         proof,
         root_hash: expected_root.to_vec(),
+        key: tx_key,
     }
 }
 
@@ -143,26 +144,25 @@ mod test {
                 _ => panic!("Unsupported transaction type"),
             }
             trie.insert(&path, &encoded_tx).expect("Failed to insert");
-            println!(
-                "index {:?}: {:?}",
-                hex::encode(path),
-                hex::encode(encoded_tx)
-            );
         }
         let trie_root = trie.root_hash().unwrap();
         let expected_root = block.header.transactions_root;
-        println!("Expected Root: {:?}", &expected_root);
-        println!("Actual Root: {:?}", &trie_root);
 
         let tx_index = 0u64;
-        let tx_key = tx_index.to_be_bytes();
+        let tx_key = alloy_rlp::encode(tx_index);
 
         // todo: check merkle proof
         let proof: Vec<Vec<u8>> = trie.get_proof(&tx_key).unwrap();
         trie.verify_proof(expected_root, &tx_key, proof.clone())
             .expect("Invalid merkle proof");
 
-        verify_merkle_proof(expected_root, proof);
+        assert_eq!(expected_root, trie_root);
+
+        let transaction = verify_merkle_proof(expected_root, proof, &tx_key);
+        println!(
+            "Verified Transaction: {:?} against Root: {:?}",
+            &transaction, &trie_root
+        );
     }
 
     #[tokio::test]
@@ -189,66 +189,28 @@ mod test {
             .unwrap();
     }
 
-    /*
-    #[tokio::test]
-    async fn test_get_merkle_proof_alloy() {
-        let key = load_infura_key_from_env();
-        println!("Key: {}", key);
-        let rpc_url = "https://mainnet.infura.io/v3/".to_string() + &key;
-        let provider = Provider::try_from(rpc_url).expect("Failed to construct provider!");
-        let block_hash = "0x8230bd00f36e52e68dd4a46bfcddeceacbb689d808327f4c76dbdf8d33d58ca8";
-        //let untrusted_hash = "0xacb81623523bbabccb1638a907686bc2f3229c70e3ab51777bef0a635f3ac03f";
-
-        let block = provider
-            .get_block_with_txs(H256::from_str(block_hash).unwrap())
-            .await
-            .expect("Failed to get Block!")
-            .expect("Block not found!");
-
-        let mut builder = alloy_trie::HashBuilder::default();
-        println!("Empty Root: {:?}", &builder.root());
-        for (index, tx) in block.transactions.iter().enumerate() {
-            let bytes = alloy_rlp::encode(index);
-            println!("bytes: {:?}", &bytes);
-            let nibbles = alloy_trie::Nibbles::unpack(index.to_be_bytes());
-            println!("Nibbles: {:?}", &nibbles);
-            builder.add_leaf(nibbles, &tx.rlp())
-        }
-        let root = builder.root();
-        println!("Root: {:?}", &root);
-        println!("Expected Root: {:?}", &block.transactions_root);
-    }
-    */
-
-    /* Reference implementation
-
-        fn verify_proof(
-            &self,
-            root_hash: B256,
-            key: &[u8],
-            proof: Vec<Vec<u8>>,
-        ) -> TrieResult<Option<Vec<u8>>> {
-            let proof_db = Arc::new(MemoryDB::new(true));
-            for node_encoded in proof.into_iter() {
-                let hash: B256 = keccak(&node_encoded).as_fixed_bytes().into();
-
-                if root_hash.eq(&hash) || node_encoded.len() >= HASHED_LENGTH {
-                    proof_db.insert(hash.as_slice(), node_encoded).unwrap();
-                }
-            }
-            let trie = EthTrie::from(proof_db, root_hash).or(Err(TrieError::InvalidProof))?;
-            trie.get(key).or(Err(TrieError::InvalidProof))
-        }
-
-    */
-    fn verify_merkle_proof(root_hash: B256, proof: Vec<Vec<u8>>) {
+    fn verify_merkle_proof(root_hash: B256, proof: Vec<Vec<u8>>, key: &[u8]) -> Vec<u8> {
         let proof_db = Arc::new(MemoryDB::new(true));
-        for node_encoded in proof.into_iter() {
+        for node_encoded in proof.clone().into_iter() {
             let hash: B256 = keccak(&node_encoded).as_fixed_bytes().into();
             proof_db.insert(hash.as_slice(), node_encoded).unwrap();
         }
-        let mut trie = EthTrie::from(proof_db, root_hash).expect("Invalid merkle proof");
+        let mut trie = EthTrie::from(proof_db, root_hash).expect("Invalid root");
         println!("Root from Merkle Proof: {:?}", trie.root_hash().unwrap());
+        trie.verify_proof(root_hash, key, proof)
+            .expect("Failed to verify Merkle Proof")
+            .expect("Key does not exist!")
+
+        /*for node_rlp in proof.into_iter().rev() {
+            let node = decode_node(&mut node_rlp.as_slice()).expect("Failed to decode node");
+            let recomputed_hash: B256 = digest_keccak(&node_rlp).into();
+            match node {
+                Node::Extension(_) => {}
+                Node::Branch(_) => {}
+                Node::Leaf(_) => {}
+                _ => {}
+            }
+        }*/
     }
 
     #[test]

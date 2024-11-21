@@ -22,7 +22,14 @@ async fn zk_verify_real_eth_transaction() {
         .prove(&pk, stdin)
         .run()
         .expect("failed to generate proof");
-    println!("Successfully generated proof!");
+    let transaction_hash = proof.public_values.to_vec();
+    println!(
+        "Successfully generated proof for Transaction: {:?}",
+        transaction_hash
+    );
     client.verify(&proof, &vk).expect("failed to verify proof");
-    println!("Successfully verified proof!");
+    println!(
+        "Successfully verified proof for Transaction: {:?}",
+        transaction_hash
+    );
 }
