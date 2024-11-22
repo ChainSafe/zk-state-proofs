@@ -258,11 +258,6 @@ mod test {
                 }
             }
         }
-        println!(
-            "Expected Trie Root: {:?}",
-            &block.header.receipts_root.bytes()
-        );
-        println!("Trie Root Result: {:?}", &trie.root_hash().unwrap().bytes());
         assert_eq!(&block.header.receipts_root, &trie.root_hash().unwrap())
     }
 
@@ -272,9 +267,9 @@ mod test {
         index_encoded: Vec<u8>,
         prefix: Option<u8>,
     ) {
-        let status = alloy_rlp::encode(r.status());
-        let cumulative_gas_used = alloy_rlp::encode(r.cumulative_gas_used());
-        let bloom = alloy_rlp::encode(r.logs_bloom);
+        let status = r.status();
+        let cumulative_gas_used = r.cumulative_gas_used();
+        let bloom = r.logs_bloom;
 
         let mut logs: Vec<Log> = Vec::new();
 
