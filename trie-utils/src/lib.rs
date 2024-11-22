@@ -286,14 +286,18 @@ mod test {
         }
 
         let list_encode: [&dyn Encodable; 4] = [&status, &cumulative_gas_used, &bloom, &logs];
+        let mut payload: Vec<u8> = Vec::new();
+
+        alloy_rlp::encode_list::<_, dyn Encodable>(&list_encode, &mut payload);
+        // handle prefix (if any)
         let mut out: Vec<u8> = Vec::new();
         if let Some(prefix) = prefix {
             out.put_u8(prefix);
         };
 
-        alloy_rlp::encode_list::<_, dyn Encodable>(&list_encode, &mut out);
-        trie.insert(&index_encoded, &alloy_rlp::encode(&out))
-            .expect("Failed to insert");
+        out.put_slice(&payload);
+
+        trie.insert(&index_encoded, &out).expect("Failed to insert");
     }
 
     #[test]
