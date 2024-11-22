@@ -205,7 +205,7 @@ mod test {
         println!("Key: {}", key);
         let rpc_url = "https://mainnet.infura.io/v3/".to_string() + &key;
         let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
-        let block_hash = "0x8230bd00f36e52e68dd4a46bfcddeceacbb689d808327f4c76dbdf8d33d58ca8";
+        let block_hash = "0xe1dd1d7e0fa5263787bf0dca315a065bbd466ce6b827ef0b619502359feadac3";
         // another block
         // 0xfa2459292cc258e554940516cd4dc12beb058a5640d0c4f865aa106db0354dfa
         let block_hash_b256 = B256::from_str(block_hash).unwrap();
@@ -233,23 +233,25 @@ mod test {
             let index_encoded = alloy_rlp::encode(index);
             match inner {
                 ReceiptEnvelope::Eip2930(r) => {
-                    out.put_u8(0x01);
-                    insert_receipt(r, &mut trie, index_encoded);
+                    let prefix: u8 = 0x01;
+                    insert_receipt(r, &mut trie, index_encoded, Some(prefix));
                 }
                 ReceiptEnvelope::Eip1559(r) => {
-                    out.put_u8(0x02);
-                    insert_receipt(r, &mut trie, index_encoded);
+                    let prefix: u8 = 0x02;
+                    insert_receipt(r, &mut trie, index_encoded, Some(prefix));
                 }
                 ReceiptEnvelope::Eip4844(r) => {
+                    let prefix: u8 = 0x03;
                     out.put_u8(0x03);
-                    insert_receipt(r, &mut trie, index_encoded);
+                    insert_receipt(r, &mut trie, index_encoded, Some(prefix));
                 }
                 ReceiptEnvelope::Eip7702(r) => {
+                    let prefix: u8 = 0x04;
                     out.put_u8(0x04);
-                    insert_receipt(r, &mut trie, index_encoded);
+                    insert_receipt(r, &mut trie, index_encoded, Some(prefix));
                 }
                 ReceiptEnvelope::Legacy(r) => {
-                    insert_receipt(r, &mut trie, index_encoded);
+                    insert_receipt(r, &mut trie, index_encoded, None);
                 }
                 _ => {
                     eprintln!("Critical: Unknown Receipt Type")
@@ -262,6 +264,41 @@ mod test {
         );
         println!("Trie Root Result: {:?}", &trie.root_hash().unwrap().bytes());
         assert_eq!(&block.header.receipts_root, &trie.root_hash().unwrap())
+    }
+
+    fn insert_receipt(
+        r: ReceiptWithBloom<AlloyLog>,
+        trie: &mut EthTrie<MemoryDB>,
+        index_encoded: Vec<u8>,
+        prefix: Option<u8>,
+    ) {
+        let status = alloy_rlp::encode(r.status());
+        let cumulative_gas_used = alloy_rlp::encode(r.cumulative_gas_used());
+        let bloom = alloy_rlp::encode(r.logs_bloom);
+
+        let mut logs: Vec<Log> = Vec::new();
+
+        for l in r.logs() {
+            let mut topics: Vec<H256> = Vec::new();
+            for t in l.topics() {
+                topics.push(H256::from_slice(t.as_ref()));
+            }
+            logs.push(Log {
+                address: l.address(),
+                topics,
+                data: l.data().data.to_vec(),
+            });
+        }
+
+        let list_encode: [&dyn Encodable; 4] = [&status, &cumulative_gas_used, &bloom, &logs];
+        let mut out: Vec<u8> = Vec::new();
+        if let Some(prefix) = prefix {
+            out.put_u8(prefix);
+        };
+
+        alloy_rlp::encode_list::<_, dyn Encodable>(&list_encode, &mut out);
+        trie.insert(&index_encoded, &alloy_rlp::encode(&out))
+            .expect("Failed to insert");
     }
 
     #[test]
@@ -299,35 +336,6 @@ mod test {
         println!("Result: {:?}", &out);
         println!("Expectation: {:?}", &expected);
         assert_eq!(out, expected);
-    }
-
-    fn insert_receipt(
-        r: ReceiptWithBloom<AlloyLog>,
-        trie: &mut EthTrie<MemoryDB>,
-        index_encoded: Vec<u8>,
-    ) {
-        let status = alloy_rlp::encode(r.status());
-        let cumulative_gas_used = alloy_rlp::encode(r.cumulative_gas_used());
-        let bloom = alloy_rlp::encode(r.logs_bloom);
-
-        let mut logs: Vec<Log> = Vec::new();
-
-        for l in r.logs() {
-            let mut topics: Vec<H256> = Vec::new();
-            for t in l.topics() {
-                topics.push(H256::from_slice(t.as_ref()));
-            }
-            logs.push(Log {
-                address: l.address(),
-                topics,
-                data: l.data().data.to_vec(),
-            });
-        }
-
-        let list_encode: [&dyn Encodable; 4] = [&status, &cumulative_gas_used, &bloom, &logs];
-        let mut out: Vec<u8> = Vec::new();
-        alloy_rlp::encode_list::<_, dyn Encodable>(&list_encode, &mut out);
-        trie.insert(&index_encoded, &out).expect("Failed to insert");
     }
 }
 
