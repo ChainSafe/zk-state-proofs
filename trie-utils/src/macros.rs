@@ -2,7 +2,6 @@
 macro_rules! encode {
     ($out:ident, $e:expr) => {
         $e.encode($out);
-        #[cfg(feature = "debug")]
         {
             let mut vec = vec![];
             $e.encode(&mut vec);
