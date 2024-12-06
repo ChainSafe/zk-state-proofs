@@ -1,12 +1,9 @@
 [workspace]
 members = [
-    "lib",
-    "program-tx-merkle",
-    "program-tx-recursive",
+    "crypto-ops",
+    "circuits/merkle-proof",
+    "circuits/merkle-proof-recursive",
     "trie-utils",
-    "script-tx-merkle",
+    "prover",
 ]
 resolver = "2"
-
-[workspace.dependencies]
-alloy-sol-types = "0.7.7"

@@ -1,0 +1,9 @@
+[package]
+version = "0.1.0"
+name = "merkle-proof-recursive"
+edition = "2021"
+
+[dependencies]
+sp1-zkvm = "3.4.0"
+crypto-ops = { path = "../../crypto-ops" }
+serde_json = "1"

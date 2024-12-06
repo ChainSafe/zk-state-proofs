@@ -1,0 +1,2 @@
+[workspace]
+members = ["merkle-proof", "merkle-proof-recursive"]

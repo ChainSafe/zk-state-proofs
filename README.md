@@ -3,12 +3,12 @@
 > [!WARNING]
 > Not production ready, under heavy development
 
-## Prove a real Ethereum mainnet Transaction in ZK
-`cd script && cargo test zk_verify_real_eth_transaction --release`:
+## Prove a real Ethereum mainnet Transaction in SP1
+`cargo test --bin prover test_sp1_merkle_proof_circuit --release`:
 
 ```rust
 #[tokio::test]
-async fn zk_verify_real_eth_transaction() {
+async fn test_sp1_merkle_proof_circuit() {
     sp1_sdk::utils::setup_logger();
     let client = ProverClient::new();
     let mut stdin = SP1Stdin::new();

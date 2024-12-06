@@ -1,8 +1,7 @@
 {
     "rust-analyzer.linkedProjects": [
-        "program-tx-merkle/Cargo.toml",
-        "script-tx-merkle/Cargo.toml",
-        "program-tx-recursive/Cargo.toml",
+        "circuits/merkle-proof-recursive/Cargo.toml",
+        "circuits/merkle-proof/Cargo.toml",
     ],
     "rust-analyzer.check.overrideCommand": [
         "cargo",

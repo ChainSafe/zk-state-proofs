@@ -1,15 +1,14 @@
+pub use alloy::eips::eip2718::{Eip2718Envelope, Encodable2718};
 use alloy::{
     consensus::{ReceiptEnvelope, ReceiptWithBloom, TxEnvelope, TxReceipt},
     primitives::B256,
     providers::{Provider, ProviderBuilder},
     rpc::types::{BlockTransactionsKind, TransactionReceipt},
 };
-// get transaction merkle proof from Ethereum
-pub use alloy::eips::eip2718::{Eip2718Envelope, Encodable2718};
 use alloy_rlp::{BufMut, Encodable};
+use crypto_ops::MerkleProofInput;
 use dotenv::dotenv;
 use eth_trie::{EthTrie, MemoryDB, Trie};
-use merkle_lib::MerkleProofInput;
 use std::{env, str::FromStr, sync::Arc};
 use url::Url;
 mod macros;
@@ -186,9 +185,9 @@ mod test {
         rpc::types::TransactionReceipt,
     };
     use alloy_rlp::{BufMut, Encodable};
+    use crypto_ops::keccak::digest_keccak;
     use eth_trie::{EthTrie, MemoryDB, Trie, DB};
     use keccak_hash::keccak;
-    use merkle_lib::keccak::digest_keccak;
     use std::{str::FromStr, sync::Arc};
     use url::Url;
 
@@ -206,7 +205,7 @@ mod test {
         let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
         let block_hash = "0x8230bd00f36e52e68dd4a46bfcddeceacbb689d808327f4c76dbdf8d33d58ca8";
         let target_index: u32 = 15u32;
-        let inputs: merkle_lib::MerkleProofInput =
+        let inputs: crypto_ops::MerkleProofInput =
             get_ethereum_transaction_proof_inputs(target_index, block_hash).await;
 
         let block = provider
@@ -238,7 +237,7 @@ mod test {
         let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
         let block_hash = "0x8230bd00f36e52e68dd4a46bfcddeceacbb689d808327f4c76dbdf8d33d58ca8";
         let target_index: u32 = 0u32;
-        let inputs: merkle_lib::MerkleProofInput =
+        let inputs: crypto_ops::MerkleProofInput =
             get_ethereum_receipt_proof_inputs(target_index, block_hash).await;
 
         let block = provider

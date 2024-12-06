@@ -1,22 +1,21 @@
 [package]
 version = "0.1.0"
-name = "script-tx-merkle"
+name = "prover"
 edition = "2021"
-default-run = "tx-merkle"
+default-run = "prover"
 
 [[bin]]
-name = "tx-merkle"
+name = "prover"
 path = "src/bin/main.rs"
 
 [dependencies]
-sp1-sdk = "3.0.0"
+sp1-sdk = "3.4.0"
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 serde = { version = "1.0.200", default-features = false, features = ["derive"] }
 clap = { version = "4.0", features = ["derive", "env"] }
 tracing = "0.1.40"
 hex = "0.4.3"
-alloy-sol-types = { workspace = true }
-merkle-lib = { path = "../lib" }
+crypto-ops = { path = "../crypto-ops" }
 trie-utils = { path = "../trie-utils" }
 tokio = { version = "1.4.11", features = ["full"] }
 

@@ -7,10 +7,8 @@ edition = "2021"
 dotenv = "0.15.0"
 tokio = { version = "1.4.11", features = ["full"] }
 eth_trie = "0.5.0"
-merkle-lib = { path = "../lib" }
+crypto-ops = { path = "../crypto-ops" }
 keccak-hash = "0.10.0"
-merkle-generator = { git = "https://github.com/ggxchain/transaction-receipt-relayer" }
-#eth-trie-proofs = "0.1.2"
 url = "2.5.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
