@@ -12,16 +12,30 @@ async fn zk_verify_real_eth_transaction() {
     sp1_sdk::utils::setup_logger();
     let client = ProverClient::new();
     let mut stdin = SP1Stdin::new();
-    let proof_input = serde_json::to_vec(&get_proof_for_transaction().await).unwrap();
+    let proof_input = serde_json::to_vec(
+        &get_ethereum_transaction_proof_inputs(
+            0u32,
+            "0x8230bd00f36e52e68dd4a46bfcddeceacbb689d808327f4c76dbdf8d33d58ca8",
+        )
+        .await,
+    )
+    .unwrap();
     stdin.write(&proof_input);
     let (pk, vk) = client.setup(MERKLE_ELF);
     let proof = client
         .prove(&pk, stdin)
         .run()
         .expect("failed to generate proof");
-    println!("Successfully generated proof!");
+    let transaction_hash = proof.public_values.to_vec();
+    println!(
+        "Successfully generated proof for Transaction: {:?}",
+        transaction_hash
+    );
     client.verify(&proof, &vk).expect("failed to verify proof");
-    println!("Successfully verified proof!");
+    println!(
+        "Successfully verified proof for Transaction: {:?}",
+        transaction_hash
+    );
 }
 ```
 

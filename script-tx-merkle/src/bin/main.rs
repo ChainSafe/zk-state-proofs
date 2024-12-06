@@ -26,7 +26,6 @@ mod tests {
             .await,
         )
         .unwrap();
-
         stdin.write(&proof_input);
         let (pk, vk) = client.setup(MERKLE_ELF);
         let proof = client
