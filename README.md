@@ -74,4 +74,4 @@ Click [here](https://github.com/jonas089/sp1-eth-tx/blob/master/rpc/src/lib.rs) 
 
 | 10 Transactions  | 20 Transactions | 30 Transactions |
 | ------------- | ------------- | ------------- |
-| 71.13s  | 156.11  | 193.42  |
+| - | - | - |
