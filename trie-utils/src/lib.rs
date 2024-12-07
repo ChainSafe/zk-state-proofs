@@ -171,7 +171,6 @@ fn insert_receipt(
 
 #[cfg(test)]
 mod test {
-
     use super::load_infura_key_from_env;
     use crate::{
         get_ethereum_receipt_proof_inputs, get_ethereum_transaction_proof_inputs, insert_receipt,
@@ -338,6 +337,32 @@ mod test {
             }
         }
         assert_eq!(&block.header.receipts_root, &trie.root_hash().unwrap())
+    }
+
+    #[tokio::test]
+    async fn dump_test_block(){
+        use std::fs::File;
+        use std::io::Write;
+        let key = load_infura_key_from_env();
+        println!("Key: {}", key);
+        let rpc_url: String = "https://mainnet.infura.io/v3/".to_string() + &key;
+        let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
+        let block_hash = "0x8230bd00f36e52e68dd4a46bfcddeceacbb689d808327f4c76dbdf8d33d58ca8";
+        let target_index: u32 = 0u32;
+        let inputs: crypto_ops::MerkleProofInput =
+            get_ethereum_receipt_proof_inputs(target_index, block_hash).await;
+
+        let block = provider
+            .get_block_by_hash(
+                B256::from_str(block_hash).unwrap(),
+                alloy::rpc::types::BlockTransactionsKind::Full,
+            )
+            .await
+            .expect("Failed to get Block!")
+            .expect("Block not found!");
+
+        let mut block_file = File::create("./data/block.dat").unwrap();
+        block_file.write_all(&serde_json::to_vec(&block).unwrap()).expect("Failed to write to block file");
     }
 
     #[test]
