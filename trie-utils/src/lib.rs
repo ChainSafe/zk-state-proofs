@@ -177,11 +177,11 @@ mod test {
         types::{Log, H256},
     };
     use alloy::{
-        consensus::ReceiptEnvelope,
+        consensus::{Account, ReceiptEnvelope},
         hex::{self, FromHex, ToHex},
-        primitives::{Address, Bloom, FixedBytes, Uint, B256, U256},
+        primitives::{Address, Bloom, FixedBytes, B256},
         providers::{Provider, ProviderBuilder},
-        rpc::types::{Block, TransactionReceipt},
+        rpc::types::TransactionReceipt,
     };
     use alloy_rlp::{BufMut, Encodable};
     use crypto_ops::keccak::digest_keccak;
@@ -348,9 +348,6 @@ mod test {
         let rpc_url: String = "https://mainnet.infura.io/v3/".to_string() + &key;
         let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
         let block_hash = "0x2683344180300c9eb6a2b7ef4f9ab6136ac230de731e742d482394b162d6a43b";
-        let target_index: u32 = 0u32;
-        let inputs: crypto_ops::MerkleProofInput =
-            get_ethereum_receipt_proof_inputs(target_index, block_hash).await;
 
         let block = provider
             .get_block_by_hash(
@@ -368,7 +365,7 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_verify_account_proof() {
+    async fn test_verify_account_and_storage_proof() {
         use std::fs::File;
         use std::io::Read;
         let mut block_file = File::open("./data/block.dat").unwrap();
@@ -400,7 +397,7 @@ mod test {
             .await
             .expect("Failed to get proof");
         println!("Proof: {:?}", &proof);
-        let account_root: Vec<u8> = verify_merkle_proof(
+        let account_proof: Vec<u8> = verify_merkle_proof(
             block.header.state_root,
             proof
                 .account_proof
@@ -411,7 +408,29 @@ mod test {
             // key: keccak hash of the account hash
             &digest_keccak(&hex::decode("0xdAC17F958D2ee523a2206206994597C13D831ec7").unwrap()),
         );
-        println!("Account Root: {:?}", &hex::encode(account_root));
+
+        let decoded_account: Account = alloy_rlp::decode_exact(&account_proof).unwrap();
+        assert_eq!(
+            decoded_account.storage_root.encode_hex::<String>(),
+            hex::encode(&proof.storage_hash)
+        );
+        let _ = verify_merkle_proof(
+            proof.storage_hash,
+            proof
+                .storage_proof
+                .first()
+                .unwrap()
+                .proof
+                .clone()
+                .into_iter()
+                .map(|b| b.to_vec())
+                .collect(),
+            &digest_keccak(
+                &hex::decode("0000000000000000000000000000000000000000000000000000000000000000")
+                    .unwrap(),
+            ),
+        );
+        println!("Verified Account Proof against Block Root & Storage Proof against Account Root")
     }
 
     #[test]
