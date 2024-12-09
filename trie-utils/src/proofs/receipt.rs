@@ -1,4 +1,4 @@
-use crate::{load_infura_key_from_env, receipt::insert_receipt};
+use crate::{constants::NODE_RPC_URL, load_infura_key_from_env, receipt::insert_receipt};
 use alloy::{
     consensus::ReceiptEnvelope,
     primitives::B256,
@@ -16,8 +16,7 @@ pub async fn get_ethereum_receipt_proof_inputs(
     block_hash: &str,
 ) -> MerkleProofInput {
     let key = load_infura_key_from_env();
-    println!("Key: {}", key);
-    let rpc_url = "https://mainnet.infura.io/v3/".to_string() + &key;
+    let rpc_url = NODE_RPC_URL.to_string() + &key;
     let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
     let block_hash_b256 = B256::from_str(block_hash).unwrap();
     let block = provider
@@ -63,7 +62,7 @@ pub async fn get_ethereum_receipt_proof_inputs(
                 insert_receipt(r, &mut trie, index_encoded, None);
             }
             _ => {
-                eprintln!("Critical: Unknown Receipt Type")
+                eprintln!("Unknown Receipt Type!")
             }
         }
     }

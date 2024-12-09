@@ -1,7 +1,6 @@
+use crate::encode;
 use alloy::primitives::Address;
 use alloy_rlp::{Encodable, RlpEncodableWrapper};
-
-use crate::encode;
 
 pub struct Log {
     pub address: Address,

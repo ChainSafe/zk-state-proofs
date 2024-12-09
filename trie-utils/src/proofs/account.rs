@@ -1,4 +1,4 @@
-use crate::load_infura_key_from_env;
+use crate::{constants::NODE_RPC_URL, load_infura_key_from_env};
 use alloy::{
     primitives::Address,
     providers::{Provider, ProviderBuilder},
@@ -9,7 +9,7 @@ use url::Url;
 
 pub async fn get_ethereum_account_proof_inputs(address: Address) -> MerkleProofInput {
     let key = load_infura_key_from_env();
-    let rpc_url = "https://mainnet.infura.io/v3/".to_string() + &key;
+    let rpc_url = NODE_RPC_URL.to_string() + &key;
     let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
     let block = provider
         .get_block(
@@ -22,7 +22,7 @@ pub async fn get_ethereum_account_proof_inputs(address: Address) -> MerkleProofI
     let proof = provider
         .get_proof(address, vec![])
         .await
-        .expect("Failed to get proof");
+        .expect("Failed to get proof!");
 
     MerkleProofInput {
         proof: proof
