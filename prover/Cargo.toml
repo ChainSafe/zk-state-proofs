@@ -24,3 +24,4 @@ sp1-helper = "3.0.0"
 
 [features]
 sp1 = ["crypto-ops/sp1"]
+cuda = ["sp1-sdk/cuda"]
