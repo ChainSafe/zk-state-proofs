@@ -8,18 +8,14 @@ fn main() {
 mod tests {
     use crate::MERKLE_ELF;
     use sp1_sdk::{ProverClient, SP1Stdin};
-    use trie_utils::get_ethereum_transaction_proof_inputs;
+    use trie_utils::{constants::DEFAULT_BLOCK_HASH, get_ethereum_transaction_proof_inputs};
     #[tokio::test]
     async fn test_generate_transaction_zk_proof() {
         sp1_sdk::utils::setup_logger();
         let client = ProverClient::new();
         let mut stdin = SP1Stdin::new();
         let proof_input = serde_json::to_vec(
-            &get_ethereum_transaction_proof_inputs(
-                0u32,
-                "0x8230bd00f36e52e68dd4a46bfcddeceacbb689d808327f4c76dbdf8d33d58ca8",
-            )
-            .await,
+            &get_ethereum_transaction_proof_inputs(0u32, DEFAULT_BLOCK_HASH).await,
         )
         .unwrap();
         stdin.write(&proof_input);
@@ -27,15 +23,15 @@ mod tests {
         let proof = client
             .prove(&pk, stdin)
             .run()
-            .expect("failed to generate proof");
+            .expect("Failed to generate proof!");
         let transaction_hash = proof.public_values.to_vec();
         println!(
-            "Successfully generated proof for Transaction: {:?}",
+            "[Success] Generated proof for Transaction: {:?}.",
             transaction_hash
         );
-        client.verify(&proof, &vk).expect("failed to verify proof");
+        client.verify(&proof, &vk).expect("Failed to verify proof!");
         println!(
-            "Successfully verified proof for Transaction: {:?}",
+            "[Success] Verified proof for Transaction: {:?}.",
             transaction_hash
         );
     }

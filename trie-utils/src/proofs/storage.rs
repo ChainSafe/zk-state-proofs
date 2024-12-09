@@ -1,4 +1,4 @@
-use crate::load_infura_key_from_env;
+use crate::{constants::NODE_RPC_URL, load_infura_key_from_env};
 use alloy::{
     primitives::{Address, FixedBytes},
     providers::{Provider, ProviderBuilder},
@@ -12,7 +12,7 @@ pub async fn get_ethereum_storage_proof_inputs(
     keys: Vec<FixedBytes<32>>,
 ) -> MerkleProofListInput {
     let key = load_infura_key_from_env();
-    let rpc_url = "https://mainnet.infura.io/v3/".to_string() + &key;
+    let rpc_url = NODE_RPC_URL.to_string() + &key;
     let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
     let block = provider
         .get_block(
@@ -25,7 +25,7 @@ pub async fn get_ethereum_storage_proof_inputs(
     let proof = provider
         .get_proof(address, keys)
         .await
-        .expect("Failed to get proof");
+        .expect("Failed to get proof!");
 
     MerkleProofListInput {
         account_proof: proof

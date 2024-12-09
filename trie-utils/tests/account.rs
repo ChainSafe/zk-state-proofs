@@ -9,7 +9,10 @@ mod test {
         providers::{Provider, ProviderBuilder},
     };
     use crypto_ops::{keccak::digest_keccak, types::MerkleProofInput, verify_merkle_proof};
-    use trie_utils::{get_ethereum_account_proof_inputs, load_infura_key_from_env};
+    use trie_utils::{
+        constants::{DEFAULT_STORAGE_KEY, NODE_RPC_URL, USDT_CONTRACT_ADDRESS},
+        get_ethereum_account_proof_inputs, load_infura_key_from_env,
+    };
     use url::Url;
 
     /// This test could fail in case a new block is produced during execution.
@@ -19,7 +22,7 @@ mod test {
     #[tokio::test]
     async fn test_verify_account_and_storage_proof() {
         let key = load_infura_key_from_env();
-        let rpc_url = "https://mainnet.infura.io/v3/".to_string() + &key;
+        let rpc_url = NODE_RPC_URL.to_string() + &key;
         let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
         let block = provider
             .get_block(
@@ -31,24 +34,19 @@ mod test {
             .unwrap();
         let proof = provider
             .get_proof(
-                Address::from_hex("0xdAC17F958D2ee523a2206206994597C13D831ec7").unwrap(),
-                vec![FixedBytes::from_hex(
-                    "0000000000000000000000000000000000000000000000000000000000000000",
-                )
-                .unwrap()],
+                Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
+                vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY).unwrap()],
             )
             .await
             .expect("Failed to get proof");
 
-        let inputs: MerkleProofInput = get_ethereum_account_proof_inputs(
-            Address::from_hex("0xdAC17F958D2ee523a2206206994597C13D831ec7").unwrap(),
-        )
-        .await;
-        println!("Proof: {:?}", &proof);
+        let inputs: MerkleProofInput =
+            get_ethereum_account_proof_inputs(Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap())
+                .await;
         let account_proof: Vec<u8> = verify_merkle_proof(
             block.header.state_root,
             inputs.proof,
-            &digest_keccak(&hex::decode("0xdAC17F958D2ee523a2206206994597C13D831ec7").unwrap()),
+            &digest_keccak(&hex::decode(USDT_CONTRACT_ADDRESS).unwrap()),
         );
         let decoded_account: Account = alloy_rlp::decode_exact(&account_proof).unwrap();
         assert_eq!(
@@ -66,10 +64,7 @@ mod test {
                 .into_iter()
                 .map(|b| b.to_vec())
                 .collect(),
-            &digest_keccak(
-                &hex::decode("0000000000000000000000000000000000000000000000000000000000000000")
-                    .unwrap(),
-            ),
+            &digest_keccak(&hex::decode(DEFAULT_STORAGE_KEY).unwrap()),
         );
         println!("[Success] Verified Account Proof against Block Root")
     }

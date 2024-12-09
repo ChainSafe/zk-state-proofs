@@ -1,4 +1,4 @@
-use crate::load_infura_key_from_env;
+use crate::{constants::NODE_RPC_URL, load_infura_key_from_env};
 use alloy::{
     consensus::TxEnvelope,
     primitives::B256,
@@ -14,8 +14,7 @@ pub async fn get_ethereum_transaction_proof_inputs(
     block_hash: &str,
 ) -> MerkleProofInput {
     let key = load_infura_key_from_env();
-    println!("Key: {}", key);
-    let rpc_url = "https://mainnet.infura.io/v3/".to_string() + &key;
+    let rpc_url = NODE_RPC_URL.to_string() + &key;
     let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
     let block = provider
         .get_block_by_hash(
@@ -45,9 +44,9 @@ pub async fn get_ethereum_transaction_proof_inputs(
             TxEnvelope::Eip7702(tx) => {
                 tx.eip2718_encode(&mut encoded_tx);
             }
-            _ => panic!("Unsupported transaction type"),
+            _ => panic!("Unsupported transaction type!"),
         }
-        trie.insert(&path, &encoded_tx).expect("Failed to insert");
+        trie.insert(&path, &encoded_tx).expect("Failed to insert!");
     }
 
     trie.root_hash().unwrap();

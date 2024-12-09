@@ -1,8 +1,8 @@
 [workspace]
 members = [
     "crypto-ops",
-    "circuits/merkle-proof",
-    "circuits/merkle-proof-recursive",
+    "circuits/sp1-merkle-proof",
+    "circuits/sp1-merkle-proof-recursive",
     "trie-utils",
     "prover",
 ]

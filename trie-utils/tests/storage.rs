@@ -9,7 +9,10 @@ mod tests {
     };
     use crypto_ops::{keccak::digest_keccak, verify_merkle_proof};
     use std::str::FromStr;
-    use trie_utils::{get_ethereum_storage_proof_inputs, load_infura_key_from_env};
+    use trie_utils::{
+        constants::{DEFAULT_STORAGE_KEY, NODE_RPC_URL, USDT_CONTRACT_ADDRESS},
+        get_ethereum_storage_proof_inputs, load_infura_key_from_env,
+    };
     use url::Url;
 
     /// This test could fail in case a new block is produced during execution.
@@ -19,7 +22,7 @@ mod tests {
     #[tokio::test]
     async fn test_verify_account_and_storage_proof() {
         let key = load_infura_key_from_env();
-        let rpc_url = "https://mainnet.infura.io/v3/".to_string() + &key;
+        let rpc_url = NODE_RPC_URL.to_string() + &key;
         let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
         let block = provider
             .get_block(
@@ -31,11 +34,8 @@ mod tests {
             .unwrap();
         let proof = provider
             .get_proof(
-                Address::from_hex("0xdAC17F958D2ee523a2206206994597C13D831ec7").unwrap(),
-                vec![FixedBytes::from_hex(
-                    "0000000000000000000000000000000000000000000000000000000000000000",
-                )
-                .unwrap()],
+                Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
+                vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY).unwrap()],
             )
             .await
             .expect("Failed to get proof");
@@ -47,7 +47,7 @@ mod tests {
                 .into_iter()
                 .map(|b| b.to_vec())
                 .collect(),
-            &digest_keccak(&hex::decode("0xdAC17F958D2ee523a2206206994597C13D831ec7").unwrap()),
+            &digest_keccak(&hex::decode(USDT_CONTRACT_ADDRESS).unwrap()),
         );
         let decoded_account: Account = alloy_rlp::decode_exact(&account_proof).unwrap();
         assert_eq!(
@@ -55,11 +55,8 @@ mod tests {
             hex::encode(&proof.storage_hash)
         );
         let storage_proof = get_ethereum_storage_proof_inputs(
-            Address::from_hex("0xdAC17F958D2ee523a2206206994597C13D831ec7").unwrap(),
-            vec![FixedBytes::from_hex(
-                "0000000000000000000000000000000000000000000000000000000000000000",
-            )
-            .unwrap()],
+            Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
+            vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY).unwrap()],
         )
         .await;
         let _ = verify_merkle_proof(
