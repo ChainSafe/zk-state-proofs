@@ -8,7 +8,6 @@ pub struct Log {
     pub topics: Vec<H256>,
     pub data: Vec<u8>,
 }
-
 impl Log {
     fn rlp_header(&self) -> alloy_rlp::Header {
         let payload_length =
@@ -19,7 +18,6 @@ impl Log {
         }
     }
 }
-
 impl Encodable for Log {
     fn encode(&self, out: &mut dyn alloy_rlp::BufMut) {
         let header = self.rlp_header();
@@ -33,7 +31,6 @@ impl Encodable for Log {
 
 #[derive(Debug, RlpEncodableWrapper, PartialEq, Clone)]
 pub struct H256(pub [u8; 32]);
-
 impl H256 {
     pub fn zero() -> Self {
         Self([0u8; 32])

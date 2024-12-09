@@ -1,46 +1,81 @@
-# Prove merkle paths for EVM transactions in SP1
+# 🔐 Complete Library to prove EVM state in ZK, to cryptographically verify storage, transactions, receipts and accounts!
+This library exposes functions and ZK circuits (SP1, Risc0) to obtain, verify and prove query infromation from `Ethereum` clients.
 
-> [!WARNING]
-> Not production ready, under heavy development
+# Overview of provided functions
 
-## Prove a real Ethereum mainnet Transaction in SP1
-`cargo test --bin prover test_sp1_merkle_proof_circuit --release`:
+| account | storage | receipt | transaction |
+| --- | --- | --- | --- |
+| Verify that an account exists in the Ethereum Trie | Verify a value stored under an account or smart contract | Verify a receipt or the entire receipt trie of a block | Verify native Ethereum transactions |
+
+- `accounts`: any Ethereum address with a Balance > 0
+- `receipts`: data related to events (for example ERC20 transfer information)
+
+# Obtain a Merkle Proof for a value in Ethereum State
+For each of these values in storage a function is provided that helps obtain a `merkle proof` from the Ethereum client using `alloy rpc`:
+
+`trie-utils/src/proofs/*`
+- account.rs
+- receipt.rs
+- storage.rs
+- transaction.rs
+
+For example `transaction.rs` returns a `merkle proof` for an individual native Ethereum transaction:
 
 ```rust
-#[tokio::test]
-async fn test_sp1_merkle_proof_circuit() {
-    sp1_sdk::utils::setup_logger();
-    let client = ProverClient::new();
-    let mut stdin = SP1Stdin::new();
-    let proof_input = serde_json::to_vec(
-        &get_ethereum_transaction_proof_inputs(
-            0u32,
-            "0x8230bd00f36e52e68dd4a46bfcddeceacbb689d808327f4c76dbdf8d33d58ca8",
+pub async fn get_ethereum_transaction_proof_inputs(
+    target_index: u32,
+    block_hash: &str,
+) -> MerkleProofInput {
+    let key = load_infura_key_from_env();
+    println!("Key: {}", key);
+    let rpc_url = "https://mainnet.infura.io/v3/".to_string() + &key;
+    let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
+    let block = provider
+        .get_block_by_hash(
+            B256::from_str(block_hash).unwrap(),
+            alloy::rpc::types::BlockTransactionsKind::Full,
         )
-        .await,
-    )
-    .unwrap();
-    stdin.write(&proof_input);
-    let (pk, vk) = client.setup(MERKLE_ELF);
-    let proof = client
-        .prove(&pk, stdin)
-        .run()
-        .expect("failed to generate proof");
-    let transaction_hash = proof.public_values.to_vec();
-    println!(
-        "Successfully generated proof for Transaction: {:?}",
-        transaction_hash
-    );
-    client.verify(&proof, &vk).expect("failed to verify proof");
-    println!(
-        "Successfully verified proof for Transaction: {:?}",
-        transaction_hash
-    );
+        .await
+        .expect("Failed to get Block!")
+        .expect("Block not found!");
+    let memdb = Arc::new(MemoryDB::new(true));
+    let mut trie = EthTrie::new(memdb.clone());
+
+    for (index, tx) in block.transactions.txns().enumerate() {
+        let path = alloy_rlp::encode(index);
+        let mut encoded_tx = vec![];
+        match &tx.inner {
+            TxEnvelope::Legacy(tx) => tx.eip2718_encode(&mut encoded_tx),
+            TxEnvelope::Eip2930(tx) => {
+                tx.eip2718_encode(&mut encoded_tx);
+            }
+            TxEnvelope::Eip1559(tx) => {
+                tx.eip2718_encode(&mut encoded_tx);
+            }
+            TxEnvelope::Eip4844(tx) => {
+                tx.eip2718_encode(&mut encoded_tx);
+            }
+            TxEnvelope::Eip7702(tx) => {
+                tx.eip2718_encode(&mut encoded_tx);
+            }
+            _ => panic!("Unsupported transaction type"),
+        }
+        trie.insert(&path, &encoded_tx).expect("Failed to insert");
+    }
+
+    trie.root_hash().unwrap();
+    let tx_key: Vec<u8> = alloy_rlp::encode(target_index);
+    let proof: Vec<Vec<u8>> = trie.get_proof(&tx_key).unwrap();
+    MerkleProofInput {
+        proof,
+        root_hash: block.header.transactions_root.to_vec(),
+        key: tx_key,
+    }
 }
 ```
 
-## Deep dive 1: Circuit
-The circuit calls the simple merkle proof verification function that depends on the `keccak` precompile:
+# Verify a Merkle Proof against a trusted State Root
+The `merkle proof` is then be verified using the `verify_merkle_proof` function found in `crypto-ops/lib.rs`:
 
 ```rust
 pub fn verify_merkle_proof(root_hash: B256, proof: Vec<Vec<u8>>, key: &[u8]) -> Vec<u8> {
@@ -49,29 +84,40 @@ pub fn verify_merkle_proof(root_hash: B256, proof: Vec<Vec<u8>>, key: &[u8]) -> 
         let hash: B256 = digest_keccak(&node_encoded).into();
         proof_db.insert(hash.as_slice(), node_encoded).unwrap();
     }
-    let trie = EthTrie::from(proof_db, root_hash).expect("Invalid merkle proof");
+    let mut trie = EthTrie::from(proof_db, root_hash).expect("Invalid merkle proof");
+    assert_eq!(root_hash, trie.root_hash().unwrap());
     trie.verify_proof(root_hash, key, proof)
         .expect("Failed to verify Merkle Proof")
         .expect("Key does not exist!")
 }
 ```
 
-If the merkle proof is invalid for the given root hash the circuit will revert and there will be no valid
-proof.
+This function checks that the trie root matches the `trusted root` obtained from the [Light Client](https://github.com/jonas089/spectre-rad).
+And that the data we claim exists in the Trie is actually present at the specified path (=`key`). 
 
-## Deep dive 2: Ethereum Merkle Trie
-This implementation depends on the [eth_trie](https://crates.io/crates/eth_trie) crate.
-`eth_trie` is a reference implementation of the merkle patricia trie.
-In the `rpc` crate full integration tests for constructing the trie can be found.
-Click [here](https://github.com/jonas089/sp1-eth-tx/blob/master/rpc/src/lib.rs) to review the code.
+# Generate a ZK proof for the validity of a Merkle Proof
+In order to prove our Merkle verification in ZK, we can use the circuit located in `circuits/merkle-proof/src/main.rs`:
 
+```rust
+#![no_main]
+sp1_zkvm::entrypoint!(main);
+use crypto_ops::{types::MerkleProofInput, verify_merkle_proof};
+pub fn main() {
+    let merkle_proof: MerkleProofInput =
+        serde_json::from_slice(&sp1_zkvm::io::read::<Vec<u8>>()).unwrap();
 
+    let output = verify_merkle_proof(
+        merkle_proof.root_hash.as_slice().try_into().unwrap(),
+        merkle_proof.proof.clone(),
+        &merkle_proof.key,
+    );
+    sp1_zkvm::io::commit_slice(&output);
+}
+```
 
+To try this against a real Ethereum Transaction for testing purposes, run:
 
-## Benchmarks on M3 Macbook Pro
+`cargo test --bin prover test_generate_transaction_zk_proof -F sp1`
 
-### Eth-trie (not perfectly optimized) using Keccak precompile
-
-| 10 Transactions  | 20 Transactions | 30 Transactions |
-| ------------- | ------------- | ------------- |
-| - | - | - |
+> [!NOTE]
+> The feature flag `sp1` tells the compiler to leverage the `keccak` precompile for hash acceleration in the ZK circuit.

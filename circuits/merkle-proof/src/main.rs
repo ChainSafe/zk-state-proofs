@@ -1,6 +1,6 @@
 #![no_main]
 sp1_zkvm::entrypoint!(main);
-use crypto_ops::{verify_merkle_proof, MerkleProofInput};
+use crypto_ops::{types::MerkleProofInput, verify_merkle_proof};
 pub fn main() {
     let merkle_proof: MerkleProofInput =
         serde_json::from_slice(&sp1_zkvm::io::read::<Vec<u8>>()).unwrap();

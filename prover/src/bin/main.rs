@@ -1,7 +1,5 @@
 use sp1_sdk::include_elf;
-/// The ELF (executable and linkable format) file for the Succinct RISC-V zkVM.
 pub const MERKLE_ELF: &[u8] = include_elf!("merkle-proof");
-
 fn main() {
     todo!("implement as client or lib")
 }
@@ -12,12 +10,10 @@ mod tests {
     use sp1_sdk::{ProverClient, SP1Stdin};
     use trie_utils::get_ethereum_transaction_proof_inputs;
     #[tokio::test]
-    async fn test_sp1_merkle_proof_circuit() {
+    async fn test_generate_transaction_zk_proof() {
         sp1_sdk::utils::setup_logger();
         let client = ProverClient::new();
         let mut stdin = SP1Stdin::new();
-        // alternative block hash
-        // 0xfa2459292cc258e554940516cd4dc12beb058a5640d0c4f865aa106db0354dfa
         let proof_input = serde_json::to_vec(
             &get_ethereum_transaction_proof_inputs(
                 0u32,
