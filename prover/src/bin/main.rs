@@ -22,10 +22,7 @@ mod tests {
     #[tokio::test]
     async fn test_generate_transaction_zk_proof_risc0() {
         let start_time = Instant::now();
-        let proof_input = serde_json::to_vec(
-            &get_ethereum_transaction_proof_inputs(0u32, DEFAULT_BLOCK_HASH).await,
-        )
-        .unwrap();
+        let proof_input = get_ethereum_transaction_proof_inputs(0u32, DEFAULT_BLOCK_HASH).await;
         let env = ExecutorEnv::builder()
             .write(&proof_input)
             .unwrap()
