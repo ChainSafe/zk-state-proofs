@@ -117,7 +117,7 @@ pub fn main() {
 
 To try this against a real Ethereum Transaction for testing purposes, run:
 
-`cargo test --bin prover test_generate_transaction_zk_proof -F sp1`
+`cargo test --bin prover test_generate_transaction_zk_proof_sp1 -F sp1`
 
 > [!NOTE]
 > The feature flag `sp1` tells the compiler to leverage the `keccak` precompile for hash acceleration in the ZK circuit.

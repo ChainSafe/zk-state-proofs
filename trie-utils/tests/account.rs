@@ -43,12 +43,12 @@ mod test {
         let inputs: MerkleProofInput =
             get_ethereum_account_proof_inputs(Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap())
                 .await;
-        let account_proof: Vec<u8> = verify_merkle_proof(
+        let account_rlp: Vec<u8> = verify_merkle_proof(
             block.header.state_root,
             inputs.proof,
             &digest_keccak(&hex::decode(USDT_CONTRACT_ADDRESS).unwrap()),
         );
-        let decoded_account: Account = alloy_rlp::decode_exact(&account_proof).unwrap();
+        let decoded_account: Account = alloy_rlp::decode_exact(&account_rlp).unwrap();
         assert_eq!(
             decoded_account.storage_root.encode_hex::<String>(),
             hex::encode(&proof.storage_hash)
