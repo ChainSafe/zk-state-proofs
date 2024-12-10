@@ -1,6 +1,6 @@
 [package]
 version = "0.1.0"
-name = "merkle-proof"
+name = "sp1-merkle-proof"
 edition = "2021"
 
 [dependencies]

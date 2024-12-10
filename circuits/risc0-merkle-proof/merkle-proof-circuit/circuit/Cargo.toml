@@ -1,0 +1,14 @@
+[package]
+name = "risc0-merkle-proof"
+version = "0.1.0"
+edition = "2021"
+
+[workspace]
+
+[dependencies]
+risc0-zkvm = { version = "1.2.0", default-features = false, features = ['std'] }
+crypto-ops = { path = "../../../../crypto-ops" }
+
+[features]
+metal = ["risc0-zkvm/metal"]
+cuda = ["risc0-zkvm/cuda"]

@@ -10,6 +10,8 @@ path = "src/bin/main.rs"
 
 [dependencies]
 sp1-sdk = "3.4.0"
+risc0-zkvm = "1.2.0"
+risc0-merkle-proof-circuit = { package = "circuit", path = "../circuits/risc0-merkle-proof/merkle-proof-circuit" }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 serde = { version = "1.0.200", default-features = false, features = ["derive"] }
 clap = { version = "4.0", features = ["derive", "env"] }
@@ -18,10 +20,13 @@ hex = "0.4.3"
 crypto-ops = { path = "../crypto-ops" }
 trie-utils = { path = "../trie-utils" }
 tokio = { version = "1.4.11", features = ["full"] }
+alloy-primitives = "0.8"
+alloy-consensus = "0.8"
 
 [build-dependencies]
 sp1-helper = "3.0.0"
 
 [features]
 sp1 = ["crypto-ops/sp1"]
-cuda = ["sp1-sdk/cuda"]
+cuda = ["sp1-sdk/cuda", "risc0-zkvm/cuda"]
+metal = ["risc0-zkvm/metal"]
