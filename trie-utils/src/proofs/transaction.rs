@@ -58,3 +58,113 @@ pub async fn get_ethereum_transaction_proof_inputs(
         key: tx_key,
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::BlockResponse;
+    use alloy::hex::ToHex;
+    use alloy_rlp::BufMut;
+    use eth_trie::{EthTrie, MemoryDB, Trie};
+    use reqwest::Client;
+    use serde_json::json;
+    use std::sync::Arc;
+    #[tokio::test]
+    async fn test_get_optimism_transaction_proof_inputs() {
+        let payload = json!({
+            "jsonrpc": "2.0",
+            "method": "eth_getBlockByHash",
+            "params": [
+                "0xda01e7fa47eb8261260369794b4eb1afe06470f2f7b047eadaf031737a3038e8",
+                true
+            ],
+            "id": 1
+        });
+        let client = Client::new();
+        let response = client
+            .post("https://mainnet.optimism.io/")
+            .json(&payload)
+            .send()
+            .await
+            .unwrap();
+
+        if response.status().is_success() {
+            let memdb = Arc::new(MemoryDB::new(true));
+            let mut trie = EthTrie::new(memdb.clone());
+            let text = response.text().await.unwrap();
+            let block: BlockResponse = serde_json::from_str(&text).unwrap();
+            for (_, transaction) in block.result.transactions.into_iter().enumerate() {
+                let mut encoded_tx = vec![];
+                match transaction.inner.inner.tx_type() {
+                    op_alloy::consensus::OpTxType::Legacy => {
+                        let x = transaction.inner.inner.as_legacy().unwrap();
+                        x.eip2718_encode(&mut encoded_tx);
+                    }
+                    op_alloy::consensus::OpTxType::Deposit => {
+                        let x = transaction.inner.inner.as_deposit().unwrap();
+                        encoded_tx.put_u8(transaction.inner.inner.tx_type().into());
+                        x.rlp_encode(&mut encoded_tx);
+                    }
+                    op_alloy::consensus::OpTxType::Eip1559 => {
+                        let x = transaction.inner.inner.as_eip1559().unwrap();
+                        x.eip2718_encode(&mut encoded_tx);
+                    }
+                    op_alloy::consensus::OpTxType::Eip2930 => {
+                        let x = transaction.inner.inner.as_eip2930().unwrap();
+                        x.eip2718_encode(&mut encoded_tx);
+                    }
+                    op_alloy::consensus::OpTxType::Eip7702 => {
+                        panic!("Not yet supported Transaction Type!");
+                    }
+                }
+                trie.insert(
+                    &alloy_rlp::encode(transaction.transaction_index.unwrap()),
+                    &encoded_tx,
+                )
+                .expect("Failed to insert!");
+            }
+            assert_eq!(
+                &trie.root_hash().unwrap().to_string(),
+                &block.result.transactions_root
+            );
+        } else {
+            panic!("Failed to get Block!");
+        }
+    }
+}
+
+// a temporary type since I wasn't able to find one?
+use op_alloy::rpc_types::Transaction as OPTransaction;
+use serde::{Deserialize, Serialize};
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BlockResponse {
+    pub jsonrpc: String,
+    pub result: BlockResult,
+    pub id: u64,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct BlockResult {
+    pub difficulty: String,
+    pub hash: String,
+    pub miner: String,
+    pub nonce: String,
+    pub number: String,
+    pub size: String,
+    pub timestamp: String,
+    pub withdrawals_root: Option<String>,
+    pub uncles: Vec<String>,
+    pub transactions: Vec<OPTransaction>,
+    pub withdrawals: Vec<Withdrawal>,
+    #[serde(rename = "transactionsRoot")]
+    pub transactions_root: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct Withdrawal {
+    // Not yet supported
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct AccessListItem {
+    // Not yet supported
+}
