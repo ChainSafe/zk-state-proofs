@@ -7,6 +7,10 @@
     Once the transaction hash is trusted we can either re-hash the raw tx and compare those hashs
     or generate and verify a zkp that the transaction hash matches that of the claim.
 
+    To verify balances or stored values use the state trie, not the receipt trie!
+    The receipt trie is only useful when proving individual (NFT, FT) transactions occurred.
+    Use the Transactions trie to prove native transactions occurred.
+
 */
 
 use crate::{constants::NODE_RPC_URL, load_infura_key_from_env, receipt::insert_receipt};
