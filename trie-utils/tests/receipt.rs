@@ -8,7 +8,8 @@ mod tests {
     use std::str::FromStr;
     use trie_utils::{
         constants::{DEFAULT_BLOCK_HASH, NODE_RPC_URL},
-        get_ethereum_receipt_proof_inputs, load_infura_key_from_env,
+        load_infura_key_from_env,
+        proofs::receipt::get_ethereum_receipt_proof_inputs,
     };
     use url::Url;
 

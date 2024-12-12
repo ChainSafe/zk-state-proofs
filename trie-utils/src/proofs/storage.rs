@@ -35,8 +35,8 @@ pub async fn get_ethereum_storage_proof_inputs(
             .collect(),
         storage_proofs: proof
             .storage_proof
-            .to_vec()
-            .into_iter()
+            .iter()
+            .cloned()
             .map(|p| p.proof.into_iter().map(|b| b.to_vec()).collect())
             .collect(),
         root_hash: block.header.state_root.to_vec(),
@@ -44,8 +44,8 @@ pub async fn get_ethereum_storage_proof_inputs(
             .to_vec(),
         storage_keys: proof
             .storage_proof
-            .to_vec()
-            .into_iter()
+            .iter()
+            .cloned()
             .map(|p| {
                 p.key
                     .as_b256()

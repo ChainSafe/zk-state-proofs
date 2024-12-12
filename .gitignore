@@ -20,3 +20,6 @@ pgo-data.profdata
 
 # Test data
 trie-utils/data
+
+# Profiling data
+**.pb

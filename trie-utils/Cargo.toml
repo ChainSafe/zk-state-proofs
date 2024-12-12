@@ -15,3 +15,5 @@ serde_json = "1"
 alloy = { version = "0.6.4", features = ["full"] }
 alloy-trie = "0.7.4"
 alloy-rlp = { version = "0.3.9" }
+reqwest = "0.12.9"
+op-alloy = { version = "0.8.0", features = ["full"] }
