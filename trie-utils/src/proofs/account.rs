@@ -1,3 +1,9 @@
+/* Use case
+
+    Prove that an account exists in global state.
+    Prerequisite to verifying storage proofs against that account's storage root.
+*/
+
 use crate::{constants::NODE_RPC_URL, load_infura_key_from_env};
 use alloy::{
     primitives::Address,

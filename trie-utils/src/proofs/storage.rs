@@ -1,3 +1,9 @@
+/* Use case
+
+    The storage trie is used to verify that a certain value exists in ethereum state.
+    This can be used to prove balances or any other values stored under contracts / accounts.
+*/
+
 use crate::{constants::NODE_RPC_URL, load_infura_key_from_env};
 use alloy::{
     primitives::{Address, FixedBytes},

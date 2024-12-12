@@ -1,3 +1,9 @@
+/* Use case
+
+    The transaction trie stores NATIVE transactions ONLY.
+    For proving individual (NFT, FT) transactions look into the receipts trie!
+*/
+
 use crate::{
     constants::{NODE_RPC_URL, OPTIMISM_RPC_URL},
     load_infura_key_from_env,
