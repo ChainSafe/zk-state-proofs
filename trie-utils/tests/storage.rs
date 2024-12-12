@@ -11,7 +11,8 @@ mod tests {
     use std::str::FromStr;
     use trie_utils::{
         constants::{DEFAULT_STORAGE_KEY, NODE_RPC_URL, USDT_CONTRACT_ADDRESS},
-        get_ethereum_storage_proof_inputs, load_infura_key_from_env,
+        load_infura_key_from_env,
+        proofs::storage::get_ethereum_storage_proof_inputs,
     };
     use url::Url;
 

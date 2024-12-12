@@ -11,7 +11,8 @@ mod test {
     use crypto_ops::{keccak::digest_keccak, types::MerkleProofInput, verify_merkle_proof};
     use trie_utils::{
         constants::{DEFAULT_STORAGE_KEY, NODE_RPC_URL, USDT_CONTRACT_ADDRESS},
-        get_ethereum_account_proof_inputs, load_infura_key_from_env,
+        load_infura_key_from_env,
+        proofs::account::get_ethereum_account_proof_inputs,
     };
     use url::Url;
 
