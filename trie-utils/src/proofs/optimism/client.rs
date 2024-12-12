@@ -37,3 +37,20 @@ impl OPClient {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::OPClient;
+    use crate::constants::{DEFAULT_OPTIMISM_BLOCK_HASH, OPTIMISM_RPC_URL};
+    use reqwest::Client;
+
+    #[tokio::test]
+    async fn test_get_block() {
+        let reqwest_client = Client::new();
+        let op_client = OPClient::new(OPTIMISM_RPC_URL.to_string(), reqwest_client);
+        let block = op_client
+            .get_block_by_hash(DEFAULT_OPTIMISM_BLOCK_HASH)
+            .await;
+        println!("Block: {:?}", &block);
+    }
+}
