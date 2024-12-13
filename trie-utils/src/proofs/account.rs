@@ -4,7 +4,7 @@
     Prerequisite to verifying storage proofs against that account's storage root.
 */
 
-use crate::{constants::NODE_RPC_URL, load_infura_key_from_env};
+use crate::{constants::NODE_RPC_URL, load_infura_key_from_env, types::NetworkEvm};
 use alloy::{
     primitives::Address,
     providers::{Provider, ProviderBuilder},
@@ -13,9 +13,14 @@ use crypto_ops::{keccak::digest_keccak, types::MerkleProofInput};
 use std::{io::Read, str::FromStr};
 use url::Url;
 
-pub async fn get_ethereum_account_proof_inputs(address: Address) -> MerkleProofInput {
-    let key = load_infura_key_from_env();
-    let rpc_url = NODE_RPC_URL.to_string() + &key;
+pub async fn get_account_proof_inputs(address: Address, network: NetworkEvm) -> MerkleProofInput {
+    let rpc_url: String = match network {
+        NetworkEvm::Ethereum => {
+            let key = load_infura_key_from_env();
+            NODE_RPC_URL.to_string() + &key
+        }
+        NetworkEvm::Optimism => NODE_RPC_URL.to_string(),
+    };
     let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
     let block = provider
         .get_block(

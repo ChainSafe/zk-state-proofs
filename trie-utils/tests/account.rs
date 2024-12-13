@@ -12,7 +12,8 @@ mod test {
     use trie_utils::{
         constants::{DEFAULT_STORAGE_KEY, NODE_RPC_URL, USDT_CONTRACT_ADDRESS},
         load_infura_key_from_env,
-        proofs::account::get_ethereum_account_proof_inputs,
+        proofs::account::get_account_proof_inputs,
+        types::NetworkEvm,
     };
     use url::Url;
 
@@ -41,9 +42,11 @@ mod test {
             .await
             .expect("Failed to get proof");
 
-        let inputs: MerkleProofInput =
-            get_ethereum_account_proof_inputs(Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap())
-                .await;
+        let inputs: MerkleProofInput = get_account_proof_inputs(
+            Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
+            NetworkEvm::Ethereum,
+        )
+        .await;
         let account_rlp: Vec<u8> = verify_merkle_proof(
             block.header.state_root,
             inputs.proof,

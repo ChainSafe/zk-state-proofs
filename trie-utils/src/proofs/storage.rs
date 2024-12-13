@@ -4,7 +4,7 @@
     This can be used to prove balances or any other values stored under contracts / accounts.
 */
 
-use crate::{constants::NODE_RPC_URL, load_infura_key_from_env};
+use crate::{constants::NODE_RPC_URL, load_infura_key_from_env, types::NetworkEvm};
 use alloy::{
     primitives::{Address, FixedBytes},
     providers::{Provider, ProviderBuilder},
@@ -13,12 +13,18 @@ use crypto_ops::{keccak::digest_keccak, types::MerkleProofListInput};
 use std::{io::Read, str::FromStr};
 use url::Url;
 
-pub async fn get_ethereum_storage_proof_inputs(
+pub async fn get_storage_proof_inputs(
     address: Address,
     keys: Vec<FixedBytes<32>>,
+    network: NetworkEvm,
 ) -> MerkleProofListInput {
-    let key = load_infura_key_from_env();
-    let rpc_url = NODE_RPC_URL.to_string() + &key;
+    let rpc_url: String = match network {
+        NetworkEvm::Ethereum => {
+            let key = load_infura_key_from_env();
+            NODE_RPC_URL.to_string() + &key
+        }
+        NetworkEvm::Optimism => NODE_RPC_URL.to_string(),
+    };
     let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
     let block = provider
         .get_block(

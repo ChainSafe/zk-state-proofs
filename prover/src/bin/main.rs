@@ -16,11 +16,12 @@ mod tests {
     use trie_utils::{
         constants::{DEFAULT_BLOCK_HASH, DEFAULT_OPTIMISM_BLOCK_HASH, USDT_CONTRACT_ADDRESS},
         proofs::{
-            account::get_ethereum_account_proof_inputs,
+            account::get_account_proof_inputs,
             transaction::{
                 get_ethereum_transaction_proof_inputs, get_optimism_transaction_proof_inputs,
             },
         },
+        types::NetworkEvm,
     };
 
     #[tokio::test]
@@ -137,8 +138,11 @@ mod tests {
         // note that when verifying the merkle proof a trusted root should be used
         // instead of the root hash from input
         let proof_input = serde_json::to_vec(
-            &get_ethereum_account_proof_inputs(Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap())
-                .await,
+            &get_account_proof_inputs(
+                Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
+                NetworkEvm::Ethereum,
+            )
+            .await,
         )
         .unwrap();
         stdin.write(&proof_input);
@@ -167,9 +171,11 @@ mod tests {
 
         // note that when verifying the merkle proof a trusted root should be used
         // instead of the root hash from input
-        let proof_input =
-            get_ethereum_account_proof_inputs(Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap())
-                .await;
+        let proof_input = get_account_proof_inputs(
+            Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
+            NetworkEvm::Ethereum,
+        )
+        .await;
         let env = ExecutorEnv::builder()
             .write(&proof_input)
             .unwrap()

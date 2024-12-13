@@ -12,7 +12,8 @@ mod tests {
     use trie_utils::{
         constants::{DEFAULT_STORAGE_KEY, NODE_RPC_URL, USDT_CONTRACT_ADDRESS},
         load_infura_key_from_env,
-        proofs::storage::get_ethereum_storage_proof_inputs,
+        proofs::storage::get_storage_proof_inputs,
+        types::NetworkEvm,
     };
     use url::Url;
 
@@ -55,9 +56,10 @@ mod tests {
             decoded_account.storage_root.encode_hex::<String>(),
             hex::encode(&proof.storage_hash)
         );
-        let storage_proof = get_ethereum_storage_proof_inputs(
+        let storage_proof = get_storage_proof_inputs(
             Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
             vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY).unwrap()],
+            NetworkEvm::Ethereum,
         )
         .await;
         let _ = verify_merkle_proof(
