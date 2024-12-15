@@ -12,8 +12,8 @@ mod test {
     use reqwest::Client;
     use trie_utils::{
         constants::{
-            DEFAULT_STORAGE_KEY_ETH, NODE_RPC_URL, OPTIMISM_RPC_URL, USDT_CONTRACT_ADDRESS,
-            USDT_CONTRACT_ADDRESS_OPTIMISM,
+            DEFAULT_STORAGE_KEY_ETH_ARB, DEFAULT_STORAGE_KEY_OPTIMISM, NODE_RPC_URL,
+            OPTIMISM_RPC_URL, USDT_CONTRACT_ADDRESS, USDT_CONTRACT_ADDRESS_OPTIMISM,
         },
         load_infura_key_from_env,
         proofs::{account::get_account_proof_inputs, optimism::client::OPClient},
@@ -41,7 +41,7 @@ mod test {
         let proof = provider
             .get_proof(
                 Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
-                vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_ETH).unwrap()],
+                vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_ETH_ARB).unwrap()],
             )
             .await
             .expect("Failed to get proof");
@@ -65,16 +65,14 @@ mod test {
 
     #[tokio::test]
     async fn test_verify_optimism_account_proof() {
-        let key = load_infura_key_from_env();
-        let rpc_url = OPTIMISM_RPC_URL.to_string() + &key;
-        let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
+        let provider = ProviderBuilder::new().on_http(Url::from_str(OPTIMISM_RPC_URL).unwrap());
         let reqwest_client = Client::new();
-        let op_client: OPClient = OPClient::new(rpc_url.to_string(), reqwest_client);
+        let op_client: OPClient = OPClient::new(OPTIMISM_RPC_URL.to_string(), reqwest_client);
         let block = op_client.get_block_by_number("latest").await;
         let proof = provider
             .get_proof(
                 Address::from_hex(USDT_CONTRACT_ADDRESS_OPTIMISM).unwrap(),
-                vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_ETH).unwrap()],
+                vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_OPTIMISM).unwrap()],
             )
             .await
             .expect("Failed to get proof");
