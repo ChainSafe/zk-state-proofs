@@ -32,14 +32,6 @@ pub async fn get_storage_proof_inputs(
         NetworkEvm::Arbitrum => ARBITRUM_ONE_RPC_URL.to_string(),
     };
     let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
-    /*let block = provider
-    .get_block(
-        alloy::eips::BlockId::Number(provider.get_block_number().await.unwrap().into()),
-        alloy::rpc::types::BlockTransactionsKind::Full,
-    )
-    .await
-    .unwrap()
-    .unwrap();*/
     let proof = provider
         .get_proof(address, keys)
         .await

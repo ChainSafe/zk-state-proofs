@@ -12,7 +12,7 @@ mod test {
     use reqwest::Client;
     use trie_utils::{
         constants::{
-            DEFAULT_STORAGE_KEY, NODE_RPC_URL, OPTIMISM_RPC_URL, USDT_CONTRACT_ADDRESS,
+            DEFAULT_STORAGE_KEY_ETH, NODE_RPC_URL, OPTIMISM_RPC_URL, USDT_CONTRACT_ADDRESS,
             USDT_CONTRACT_ADDRESS_OPTIMISM,
         },
         load_infura_key_from_env,
@@ -41,7 +41,7 @@ mod test {
         let proof = provider
             .get_proof(
                 Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
-                vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY).unwrap()],
+                vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_ETH).unwrap()],
             )
             .await
             .expect("Failed to get proof");
@@ -74,7 +74,7 @@ mod test {
         let proof = provider
             .get_proof(
                 Address::from_hex(USDT_CONTRACT_ADDRESS_OPTIMISM).unwrap(),
-                vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY).unwrap()],
+                vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_ETH).unwrap()],
             )
             .await
             .expect("Failed to get proof");

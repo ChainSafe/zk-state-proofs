@@ -12,8 +12,8 @@ mod tests {
     use std::str::FromStr;
     use trie_utils::{
         constants::{
-            DEFAULT_STORAGE_KEY, NODE_RPC_URL, OPTIMISM_RPC_URL, USDT_CONTRACT_ADDRESS,
-            USDT_CONTRACT_ADDRESS_OPTIMISM,
+            DEFAULT_STORAGE_KEY_ETH, DEFAULT_STORAGE_KEY_OPTIMISM, NODE_RPC_URL, OPTIMISM_RPC_URL,
+            USDT_CONTRACT_ADDRESS, USDT_CONTRACT_ADDRESS_OPTIMISM,
         },
         load_infura_key_from_env,
         proofs::{optimism::client::OPClient, storage::get_storage_proof_inputs},
@@ -41,7 +41,7 @@ mod tests {
         let proof = provider
             .get_proof(
                 Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
-                vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY).unwrap()],
+                vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_ETH).unwrap()],
             )
             .await
             .expect("Failed to get proof");
@@ -62,7 +62,7 @@ mod tests {
         );
         let storage_proof = get_storage_proof_inputs(
             Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
-            vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY).unwrap()],
+            vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_ETH).unwrap()],
             NetworkEvm::Ethereum,
             block.header.state_root.to_vec(),
         )
@@ -86,7 +86,7 @@ mod tests {
         let proof = provider
             .get_proof(
                 Address::from_hex(USDT_CONTRACT_ADDRESS_OPTIMISM).unwrap(),
-                vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY).unwrap()],
+                vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_OPTIMISM).unwrap()],
             )
             .await
             .expect("Failed to get proof");
@@ -107,7 +107,7 @@ mod tests {
         );
         let storage_proof = get_storage_proof_inputs(
             Address::from_hex(USDT_CONTRACT_ADDRESS_OPTIMISM).unwrap(),
-            vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY).unwrap()],
+            vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_OPTIMISM).unwrap()],
             NetworkEvm::Optimism,
             hex::decode(&block.state_root).unwrap(),
         )
