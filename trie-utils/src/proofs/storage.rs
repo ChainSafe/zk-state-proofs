@@ -4,7 +4,11 @@
     This can be used to prove balances or any other values stored under contracts / accounts.
 */
 
-use crate::{constants::NODE_RPC_URL, load_infura_key_from_env, types::NetworkEvm};
+use crate::{
+    constants::{ARBITRUM_ONE_RPC_URL, NODE_RPC_URL, OPTIMISM_RPC_URL},
+    load_infura_key_from_env,
+    types::NetworkEvm,
+};
 use alloy::{
     primitives::{Address, FixedBytes},
     providers::{Provider, ProviderBuilder},
@@ -17,23 +21,25 @@ pub async fn get_storage_proof_inputs(
     address: Address,
     keys: Vec<FixedBytes<32>>,
     network: NetworkEvm,
+    root_hash: Vec<u8>,
 ) -> MerkleProofListInput {
     let rpc_url: String = match network {
         NetworkEvm::Ethereum => {
             let key = load_infura_key_from_env();
             NODE_RPC_URL.to_string() + &key
         }
-        NetworkEvm::Optimism => NODE_RPC_URL.to_string(),
+        NetworkEvm::Optimism => OPTIMISM_RPC_URL.to_string(),
+        NetworkEvm::Arbitrum => ARBITRUM_ONE_RPC_URL.to_string(),
     };
     let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
-    let block = provider
-        .get_block(
-            alloy::eips::BlockId::Number(provider.get_block_number().await.unwrap().into()),
-            alloy::rpc::types::BlockTransactionsKind::Full,
-        )
-        .await
-        .unwrap()
-        .unwrap();
+    /*let block = provider
+    .get_block(
+        alloy::eips::BlockId::Number(provider.get_block_number().await.unwrap().into()),
+        alloy::rpc::types::BlockTransactionsKind::Full,
+    )
+    .await
+    .unwrap()
+    .unwrap();*/
     let proof = provider
         .get_proof(address, keys)
         .await
@@ -51,7 +57,7 @@ pub async fn get_storage_proof_inputs(
             .cloned()
             .map(|p| p.proof.into_iter().map(|b| b.to_vec()).collect())
             .collect(),
-        root_hash: block.header.state_root.to_vec(),
+        root_hash,
         account_key: digest_keccak(&address.bytes().collect::<Result<Vec<u8>, _>>().unwrap())
             .to_vec(),
         storage_keys: proof

@@ -5,6 +5,7 @@ use alloy_rlp::{Encodable, RlpEncodableWrapper};
 pub enum NetworkEvm {
     Ethereum,
     Optimism,
+    Arbitrum,
 }
 
 pub struct Log {
