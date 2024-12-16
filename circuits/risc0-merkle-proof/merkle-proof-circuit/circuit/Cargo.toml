@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 risc0-zkvm = { version = "1.2.0", default-features = false, features = ['std'] }
 crypto-ops = { path = "../../../../crypto-ops" }
-
+borsh = { version = "1.5.3", features = ["derive"] }
 [features]
 metal = ["risc0-zkvm/metal"]
 cuda = ["risc0-zkvm/cuda"]

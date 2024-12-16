@@ -2247,6 +2247,7 @@ name = "crypto-ops"
 version = "0.1.0"
 dependencies = [
  "alloy-primitives 0.8.15",
+ "borsh",
  "eth_trie 0.5.0 (git+https://github.com/jonas089/eth-trie.rs)",
  "serde",
  "serde_json",
@@ -5775,6 +5776,7 @@ version = "0.1.0"
 dependencies = [
  "alloy-consensus 0.8.0",
  "alloy-primitives 0.8.15",
+ "borsh",
  "circuit",
  "clap",
  "crypto-ops",
@@ -7241,6 +7243,7 @@ dependencies = [
 name = "sp1-merkle-proof"
 version = "0.1.0"
 dependencies = [
+ "borsh",
  "crypto-ops",
  "serde_json",
  "sp1-zkvm",

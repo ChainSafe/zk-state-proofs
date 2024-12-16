@@ -27,13 +27,14 @@ mod tests {
     #[tokio::test]
     async fn test_generate_ethereum_transaction_zk_proof_risc0() {
         let start_time = Instant::now();
-        let proof_input = get_ethereum_transaction_proof_inputs(0u32, DEFAULT_BLOCK_HASH).await;
+        let proof_input =
+            borsh::to_vec(&get_ethereum_transaction_proof_inputs(0u32, DEFAULT_BLOCK_HASH).await)
+                .unwrap();
 
         // note that when verifying the merkle proof a trusted root should be used
         // instead of the root hash from input
         let env = ExecutorEnv::builder()
-            .write(&proof_input)
-            .unwrap()
+            .write_slice(&proof_input)
             .build()
             .unwrap();
         let prover = default_prover();
@@ -52,10 +53,9 @@ mod tests {
 
         // note that when verifying the merkle proof a trusted root should be used
         // instead of the root hash from input
-        let proof_input = serde_json::to_vec(
-            &get_ethereum_transaction_proof_inputs(0u32, DEFAULT_BLOCK_HASH).await,
-        )
-        .unwrap();
+        let proof_input =
+            borsh::to_vec(&get_ethereum_transaction_proof_inputs(0u32, DEFAULT_BLOCK_HASH).await)
+                .unwrap();
         stdin.write(&proof_input);
         let (pk, vk) = client.setup(MERKLE_ELF);
         let proof = client
@@ -82,11 +82,15 @@ mod tests {
 
         // note that when verifying the merkle proof a trusted root should be used
         // instead of the root hash from input
-        let proof_input =
-            get_optimism_transaction_proof_inputs(0u32, DEFAULT_OPTIMISM_BLOCK_HASH).await;
+        let proof_input = borsh::to_vec(
+            &get_optimism_transaction_proof_inputs(0u32, DEFAULT_OPTIMISM_BLOCK_HASH).await,
+        )
+        .unwrap();
+
+        // note that when verifying the merkle proof a trusted root should be used
+        // instead of the root hash from input
         let env = ExecutorEnv::builder()
-            .write(&proof_input)
-            .unwrap()
+            .write_slice(&proof_input)
             .build()
             .unwrap();
         let prover = default_prover();
@@ -105,44 +109,8 @@ mod tests {
 
         // note that when verifying the merkle proof a trusted root should be used
         // instead of the root hash from input
-        let proof_input = serde_json::to_vec(
+        let proof_input = borsh::to_vec(
             &get_optimism_transaction_proof_inputs(0u32, DEFAULT_OPTIMISM_BLOCK_HASH).await,
-        )
-        .unwrap();
-        stdin.write(&proof_input);
-        let (pk, vk) = client.setup(MERKLE_ELF);
-        let proof = client
-            .prove(&pk, stdin)
-            .run()
-            .expect("Failed to generate proof!");
-        let transaction_hash = proof.public_values.to_vec();
-        println!(
-            "[Success] Generated proof for Transaction: {:?}.",
-            transaction_hash
-        );
-        client.verify(&proof, &vk).expect("Failed to verify proof!");
-        println!(
-            "[Success] Verified proof for Transaction: {:?}.",
-            transaction_hash
-        );
-        let duration = start_time.elapsed();
-        println!("Elapsed time: {:?}", duration);
-    }
-
-    #[tokio::test]
-    async fn test_generate_ethereum_account_zk_proof_sp1() {
-        let start_time = Instant::now();
-        let client = ProverClient::new();
-        let mut stdin = SP1Stdin::new();
-
-        // note that when verifying the merkle proof a trusted root should be used
-        // instead of the root hash from input
-        let proof_input = serde_json::to_vec(
-            &get_account_proof_inputs(
-                Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
-                NetworkEvm::Ethereum,
-            )
-            .await,
         )
         .unwrap();
         stdin.write(&proof_input);
@@ -171,20 +139,58 @@ mod tests {
 
         // note that when verifying the merkle proof a trusted root should be used
         // instead of the root hash from input
-        let proof_input = get_account_proof_inputs(
-            Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
-            NetworkEvm::Ethereum,
+        let proof_input = borsh::to_vec(
+            &get_account_proof_inputs(
+                Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
+                NetworkEvm::Ethereum,
+            )
+            .await,
         )
-        .await;
+        .unwrap();
         let env = ExecutorEnv::builder()
-            .write(&proof_input)
-            .unwrap()
+            .write_slice(&proof_input)
             .build()
             .unwrap();
         let prover = default_prover();
         let prove_info = prover.prove(env, RISC0_MERKLE_PROOF_ELF).unwrap();
         let receipt = prove_info.receipt;
         receipt.verify(RISC0_MERKLE_PROOF_ID).unwrap();
+        let duration = start_time.elapsed();
+        println!("Elapsed time: {:?}", duration);
+    }
+
+    #[tokio::test]
+    async fn test_generate_ethereum_account_zk_proof_sp1() {
+        let start_time = Instant::now();
+        let client = ProverClient::new();
+        let mut stdin = SP1Stdin::new();
+
+        // note that when verifying the merkle proof a trusted root should be used
+        // instead of the root hash from input
+        let proof_input = borsh::to_vec(
+            &get_account_proof_inputs(
+                Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
+                NetworkEvm::Ethereum,
+            )
+            .await,
+        )
+        .unwrap();
+        stdin.write(&proof_input);
+        let (pk, vk) = client.setup(MERKLE_ELF);
+        let proof = client
+            .prove(&pk, stdin)
+            .run()
+            .expect("Failed to generate proof!");
+        let transaction_hash = proof.public_values.to_vec();
+        println!(
+            "[Success] Generated proof for Transaction: {:?}.",
+            transaction_hash
+        );
+        client.verify(&proof, &vk).expect("Failed to verify proof!");
+        println!(
+            "[Success] Verified proof for Transaction: {:?}.",
+            transaction_hash
+        );
         let duration = start_time.elapsed();
         println!("Elapsed time: {:?}", duration);
     }
