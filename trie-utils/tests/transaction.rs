@@ -13,7 +13,6 @@ mod tests {
         let target_index: u32 = 15u32;
         let inputs: crypto_ops::types::MerkleProofInput =
             get_ethereum_transaction_proof_inputs(target_index, DEFAULT_BLOCK_HASH).await;
-
         // note that when verifying the merkle proof a trusted root should be used
         // instead of the root hash from input
         let _ = verify_merkle_proof(

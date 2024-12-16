@@ -151,7 +151,7 @@ mod tests {
         let decoded_account: Account = alloy_rlp::decode_exact(&account_proof).unwrap();
         assert_eq!(
             decoded_account.storage_root.encode_hex::<String>(),
-            // strip 0x suffix from response
+            // strip 0x prefix from response
             proof.result.storage_hash[2..]
         );
         let storage_proof = get_storage_proof_inputs_arbitrum(
