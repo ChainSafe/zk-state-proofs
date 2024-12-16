@@ -29,11 +29,61 @@ impl OPClient {
             .await
             .unwrap();
         if response.status().is_success() {
-            let block_response: BlockResponse =
-                serde_json::from_str(&response.text().await.unwrap()).unwrap();
+            let response_text = response.text().await.unwrap();
+            let block_response: BlockResponse = serde_json::from_str(&response_text).unwrap();
             block_response.result
         } else {
             panic!("Failed to get OP Block!");
         }
+    }
+    pub async fn get_block_by_number(&self, block_number: &str) -> BlockResult {
+        let payload = json!({
+            "jsonrpc": "2.0",
+            "method": "eth_getBlockByNumber",
+            "params": [
+                block_number,
+                true
+            ],
+            "id": 1
+        });
+        let response = self
+            .client
+            .post(&self.rpc_url)
+            .json(&payload)
+            .send()
+            .await
+            .unwrap();
+        if response.status().is_success() {
+            let response_text = response.text().await.unwrap();
+            let block_response: BlockResponse = serde_json::from_str(&response_text).unwrap();
+            block_response.result
+        } else {
+            panic!("Failed to get OP Block!");
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::OPClient;
+    use crate::constants::{DEFAULT_OPTIMISM_BLOCK_HASH, OPTIMISM_RPC_URL};
+    use reqwest::Client;
+
+    #[tokio::test]
+    async fn test_get_block() {
+        let reqwest_client = Client::new();
+        let op_client = OPClient::new(OPTIMISM_RPC_URL.to_string(), reqwest_client);
+        let block = op_client
+            .get_block_by_hash(DEFAULT_OPTIMISM_BLOCK_HASH)
+            .await;
+        println!("Block: {:?}", &block);
+    }
+
+    #[tokio::test]
+    async fn test_get_latest_block() {
+        let reqwest_client = Client::new();
+        let op_client = OPClient::new(OPTIMISM_RPC_URL.to_string(), reqwest_client);
+        let block = op_client.get_block_by_number("latest").await;
+        println!("Block: {:?}", &block);
     }
 }

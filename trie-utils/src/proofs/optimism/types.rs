@@ -21,6 +21,8 @@ pub struct BlockResult {
     pub uncles: Vec<String>,
     pub transactions: Vec<OPTransaction>,
     pub withdrawals: Vec<Withdrawal>,
+    #[serde(rename = "stateRoot")]
+    pub state_root: String,
     #[serde(rename = "transactionsRoot")]
     pub transactions_root: String,
 }

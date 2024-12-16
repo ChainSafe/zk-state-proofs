@@ -16,17 +16,21 @@ mod tests {
     use trie_utils::{
         constants::{DEFAULT_BLOCK_HASH, DEFAULT_OPTIMISM_BLOCK_HASH, USDT_CONTRACT_ADDRESS},
         proofs::{
-            account::get_ethereum_account_proof_inputs,
+            account::get_account_proof_inputs,
             transaction::{
                 get_ethereum_transaction_proof_inputs, get_optimism_transaction_proof_inputs,
             },
         },
+        types::NetworkEvm,
     };
 
     #[tokio::test]
     async fn test_generate_ethereum_transaction_zk_proof_risc0() {
         let start_time = Instant::now();
         let proof_input = get_ethereum_transaction_proof_inputs(0u32, DEFAULT_BLOCK_HASH).await;
+
+        // note that when verifying the merkle proof a trusted root should be used
+        // instead of the root hash from input
         let env = ExecutorEnv::builder()
             .write(&proof_input)
             .unwrap()
@@ -45,6 +49,9 @@ mod tests {
         let start_time = Instant::now();
         let client = ProverClient::new();
         let mut stdin = SP1Stdin::new();
+
+        // note that when verifying the merkle proof a trusted root should be used
+        // instead of the root hash from input
         let proof_input = serde_json::to_vec(
             &get_ethereum_transaction_proof_inputs(0u32, DEFAULT_BLOCK_HASH).await,
         )
@@ -72,6 +79,9 @@ mod tests {
     #[tokio::test]
     async fn test_generate_optimism_transaction_zk_proof_risc0() {
         let start_time = Instant::now();
+
+        // note that when verifying the merkle proof a trusted root should be used
+        // instead of the root hash from input
         let proof_input =
             get_optimism_transaction_proof_inputs(0u32, DEFAULT_OPTIMISM_BLOCK_HASH).await;
         let env = ExecutorEnv::builder()
@@ -92,6 +102,9 @@ mod tests {
         let start_time = Instant::now();
         let client = ProverClient::new();
         let mut stdin = SP1Stdin::new();
+
+        // note that when verifying the merkle proof a trusted root should be used
+        // instead of the root hash from input
         let proof_input = serde_json::to_vec(
             &get_optimism_transaction_proof_inputs(0u32, DEFAULT_OPTIMISM_BLOCK_HASH).await,
         )
@@ -121,9 +134,15 @@ mod tests {
         let start_time = Instant::now();
         let client = ProverClient::new();
         let mut stdin = SP1Stdin::new();
+
+        // note that when verifying the merkle proof a trusted root should be used
+        // instead of the root hash from input
         let proof_input = serde_json::to_vec(
-            &get_ethereum_account_proof_inputs(Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap())
-                .await,
+            &get_account_proof_inputs(
+                Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
+                NetworkEvm::Ethereum,
+            )
+            .await,
         )
         .unwrap();
         stdin.write(&proof_input);
@@ -149,9 +168,14 @@ mod tests {
     #[tokio::test]
     async fn test_generate_ethereum_account_zk_proof_risc0() {
         let start_time = Instant::now();
-        let proof_input =
-            get_ethereum_account_proof_inputs(Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap())
-                .await;
+
+        // note that when verifying the merkle proof a trusted root should be used
+        // instead of the root hash from input
+        let proof_input = get_account_proof_inputs(
+            Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
+            NetworkEvm::Ethereum,
+        )
+        .await;
         let env = ExecutorEnv::builder()
             .write(&proof_input)
             .unwrap()

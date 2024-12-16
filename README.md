@@ -119,6 +119,8 @@ To try this against a real Ethereum Transaction for testing purposes, run:
 
 `cargo test --bin prover test_generate_ethereum_transaction_zk_proof_sp1 -F sp1`
 
+consider using `-F cuda` when cuda acceleration is available!
+
 or 
 
 `cargo test --bin prover test_generate_optimism_transaction_zk_proof_risc0 -F metal`

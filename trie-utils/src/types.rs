@@ -2,6 +2,12 @@ use crate::encode;
 use alloy::primitives::Address;
 use alloy_rlp::{Encodable, RlpEncodableWrapper};
 
+pub enum NetworkEvm {
+    Ethereum,
+    Optimism,
+    Arbitrum,
+}
+
 pub struct Log {
     pub address: Address,
     pub topics: Vec<H256>,

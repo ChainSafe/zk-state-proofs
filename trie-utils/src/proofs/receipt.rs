@@ -1,3 +1,17 @@
+/* Use case
+
+    The receipt trie stores all events (including those emitted from ERC20 contracts).
+    We can use the receipt proofs to verify that an ERC20 or NFT transfer happened e.g. that the
+    transaction hash was included in a block.
+
+    Once the transaction hash is trusted we can either re-hash the raw tx and compare those hashs
+    or generate and verify a zkp that the transaction hash matches that of the claim.
+
+    To verify balances or stored values use the state trie, not the receipt trie!
+    The receipt trie is only useful when proving individual (NFT, FT) transactions occurred.
+    Use the Transactions trie to prove native transactions occurred.
+*/
+
 use crate::{constants::NODE_RPC_URL, load_infura_key_from_env, receipt::insert_receipt};
 use alloy::{
     consensus::ReceiptEnvelope,
@@ -36,6 +50,7 @@ pub async fn get_ethereum_receipt_proof_inputs(
     let mut trie = EthTrie::new(memdb.clone());
 
     for (index, receipt) in receipts.into_iter().enumerate() {
+        println!("Receipt: {:?}", &receipt);
         let inner: ReceiptEnvelope<alloy::rpc::types::Log> = receipt.inner;
         let mut out: Vec<u8> = Vec::new();
         let index_encoded = alloy_rlp::encode(index);
