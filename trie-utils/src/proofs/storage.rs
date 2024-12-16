@@ -10,12 +10,16 @@ use crate::{
     types::NetworkEvm,
 };
 use alloy::{
+    hex,
     primitives::{Address, FixedBytes},
     providers::{Provider, ProviderBuilder},
 };
 use crypto_ops::{keccak::digest_keccak, types::MerkleProofListInput};
+use reqwest::Client;
 use std::{io::Read, str::FromStr};
 use url::Url;
+
+use super::arbitrum::client::ArbitrumClient;
 
 pub async fn get_storage_proof_inputs(
     address: Address,
@@ -29,7 +33,7 @@ pub async fn get_storage_proof_inputs(
             NODE_RPC_URL.to_string() + &key
         }
         NetworkEvm::Optimism => OPTIMISM_RPC_URL.to_string(),
-        NetworkEvm::Arbitrum => ARBITRUM_ONE_RPC_URL.to_string(),
+        NetworkEvm::Arbitrum => panic!("Use get_storage_proof_inputs_arbitrum instead!"),
     };
     let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
     let proof = provider
@@ -63,6 +67,47 @@ pub async fn get_storage_proof_inputs(
                     .collect::<Result<Vec<u8>, _>>()
                     .unwrap()
             })
+            .collect(),
+    }
+}
+
+pub async fn get_storage_proof_inputs_arbitrum(
+    address_hex: String,
+    keys: Vec<String>,
+    root_hash: Vec<u8>,
+) -> MerkleProofListInput {
+    let reqwest_client: Client = Client::new();
+    let arb_client: ArbitrumClient =
+        ArbitrumClient::new(ARBITRUM_ONE_RPC_URL.to_string(), reqwest_client);
+    let proof = arb_client.get_proof(&address_hex, keys).await;
+    let proof_result = proof.result;
+    MerkleProofListInput {
+        account_proof: proof_result
+            .account_proof
+            .into_iter()
+            .map(|b| hex::decode(b).unwrap())
+            .collect(),
+        storage_proofs: proof_result
+            .storage_proof
+            .clone()
+            .unwrap()
+            .iter()
+            .cloned()
+            .map(|p| {
+                p.proof
+                    .into_iter()
+                    .map(|b| hex::decode(b).unwrap())
+                    .collect()
+            })
+            .collect(),
+        root_hash,
+        account_key: digest_keccak(&hex::decode(&address_hex).unwrap()).to_vec(),
+        storage_keys: proof_result
+            .storage_proof
+            .unwrap()
+            .iter()
+            .cloned()
+            .map(|p| hex::decode(p.key).unwrap())
             .collect(),
     }
 }

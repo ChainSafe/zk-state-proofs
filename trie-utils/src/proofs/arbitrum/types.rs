@@ -36,7 +36,7 @@ pub struct AccessListItem {
     // Not yet supported
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct AccountProofResponse {
     pub jsonrpc: String,
     pub result: AccountProof,
@@ -60,7 +60,7 @@ pub struct AccountProof {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct StorageProof {
-    pub key: Option<String>,
-    pub proof: Option<Vec<String>>,
+    pub key: String,
+    pub proof: Vec<String>,
     pub value: String,
 }

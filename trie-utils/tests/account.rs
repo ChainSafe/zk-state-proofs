@@ -27,7 +27,7 @@ mod test {
 
     /// This test could fail in case a new block is produced during execution.
     /// The risk of this happening is accepted and it's recommended to re-run the test
-    /// in the very rare case where it fails for said reason.
+    /// handle this case by verifying the merkle proof before generating a zkp!
     /// The same is true for the test in storage.rs
     #[tokio::test]
     async fn test_verify_ethereum_account_proof() {
