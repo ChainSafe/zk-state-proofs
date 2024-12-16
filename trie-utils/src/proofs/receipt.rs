@@ -50,7 +50,6 @@ pub async fn get_ethereum_receipt_proof_inputs(
     let mut trie = EthTrie::new(memdb.clone());
 
     for (index, receipt) in receipts.into_iter().enumerate() {
-        println!("Receipt: {:?}", &receipt);
         let inner: ReceiptEnvelope<alloy::rpc::types::Log> = receipt.inner;
         let mut out: Vec<u8> = Vec::new();
         let index_encoded = alloy_rlp::encode(index);
