@@ -84,7 +84,6 @@ impl ArbitrumClient {
 
         if response.status().is_success() {
             let response_text = response.text().await.unwrap();
-            println!("Response: {:?}", &response_text);
             let account_proof_response: AccountProofResponse =
                 serde_json::from_str(&response_text).unwrap();
             account_proof_response
