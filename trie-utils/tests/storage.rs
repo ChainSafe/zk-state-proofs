@@ -12,7 +12,7 @@ mod tests {
     use std::str::FromStr;
     use trie_utils::{
         constants::{
-            DEFAULT_STORAGE_KEY_ETH_ARB, DEFAULT_STORAGE_KEY_OPTIMISM, NODE_RPC_URL,
+            DEFAULT_STORAGE_KEY_ETHEREUM, DEFAULT_STORAGE_KEY_OPTIMISM, NODE_RPC_URL,
             OPTIMISM_RPC_URL, USDT_CONTRACT_ADDRESS, USDT_CONTRACT_ADDRESS_OPTIMISM,
         },
         load_infura_key_from_env,
@@ -41,7 +41,7 @@ mod tests {
         let proof = provider
             .get_proof(
                 Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
-                vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_ETH_ARB).unwrap()],
+                vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_ETHEREUM).unwrap()],
             )
             .await
             .expect("Failed to get proof");
@@ -62,7 +62,7 @@ mod tests {
         );
         let storage_proof = get_storage_proof_inputs(
             Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
-            vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_ETH_ARB).unwrap()],
+            vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_ETHEREUM).unwrap()],
             NetworkEvm::Ethereum,
             block.header.state_root.to_vec(),
         )

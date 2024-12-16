@@ -12,11 +12,15 @@ mod test {
     use reqwest::Client;
     use trie_utils::{
         constants::{
-            DEFAULT_STORAGE_KEY_ETH_ARB, DEFAULT_STORAGE_KEY_OPTIMISM, NODE_RPC_URL,
-            OPTIMISM_RPC_URL, USDT_CONTRACT_ADDRESS, USDT_CONTRACT_ADDRESS_OPTIMISM,
+            ARBITRUM_ONE_RPC_URL, DEFAULT_STORAGE_KEY_ETHEREUM, DEFAULT_STORAGE_KEY_OPTIMISM,
+            NODE_RPC_URL, OPTIMISM_RPC_URL, USDT_CONTRACT_ADDRESS, USDT_CONTRACT_ADDRESS_ARBITRUM,
+            USDT_CONTRACT_ADDRESS_OPTIMISM,
         },
         load_infura_key_from_env,
-        proofs::{account::get_account_proof_inputs, optimism::client::OPClient},
+        proofs::{
+            account::get_account_proof_inputs, arbitrum::client::ArbitrumClient,
+            optimism::client::OPClient,
+        },
         types::NetworkEvm,
     };
     use url::Url;
@@ -41,7 +45,7 @@ mod test {
         let proof = provider
             .get_proof(
                 Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
-                vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_ETH_ARB).unwrap()],
+                vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_ETHEREUM).unwrap()],
             )
             .await
             .expect("Failed to get proof");
@@ -90,6 +94,37 @@ mod test {
         assert_eq!(
             decoded_account.storage_root.encode_hex::<String>(),
             hex::encode(&proof.storage_hash)
+        );
+    }
+
+    #[tokio::test]
+    async fn test_verify_arbitrum_account_proof() {
+        let reqwest_client = Client::new();
+        let arb_client: ArbitrumClient =
+            ArbitrumClient::new(ARBITRUM_ONE_RPC_URL.to_string(), reqwest_client);
+        let block = arb_client.get_block_by_number("latest").await;
+        let proof = arb_client
+            .get_proof(
+                USDT_CONTRACT_ADDRESS_ARBITRUM,
+                vec![DEFAULT_STORAGE_KEY_ETHEREUM.to_string()],
+            )
+            .await;
+        let account_proof: Vec<u8> = verify_merkle_proof(
+            FixedBytes::from_slice(&hex::decode(&block.state_root).unwrap()),
+            proof
+                .result
+                .account_proof
+                .clone()
+                .into_iter()
+                .map(|b| hex::decode(b).unwrap())
+                .collect(),
+            &digest_keccak(&hex::decode(USDT_CONTRACT_ADDRESS_ARBITRUM).unwrap()),
+        );
+        let decoded_account: Account = alloy_rlp::decode_exact(&account_proof).unwrap();
+        assert_eq!(
+            decoded_account.storage_root.encode_hex::<String>(),
+            // strip 0x suffix from response
+            proof.result.storage_hash[2..]
         );
     }
 }

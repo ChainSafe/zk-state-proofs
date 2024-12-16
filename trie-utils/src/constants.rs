@@ -17,7 +17,7 @@ pub const USDT_CONTRACT_ADDRESS_OPTIMISM: &str = "0x94b008aA00579c1307B0EF2c499a
 // used for testing
 pub const USDT_CONTRACT_ADDRESS_ARBITRUM: &str = "0xFd086bC7CD5C481DCC9C85ebE478A1C0b69FCbb9";
 // used for testing, totalSupply storage slot for USDT
-pub const DEFAULT_STORAGE_KEY_ETH_ARB: &str =
+pub const DEFAULT_STORAGE_KEY_ETHEREUM: &str =
     "0x0000000000000000000000000000000000000000000000000000000000000000";
 // used for testing, totalSupply storage slot for USDT
 pub const DEFAULT_STORAGE_KEY_OPTIMISM: &str =
