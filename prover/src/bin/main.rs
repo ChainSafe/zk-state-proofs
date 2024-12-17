@@ -14,6 +14,7 @@ mod tests {
     use alloy_primitives::{Address, FixedBytes};
     use hex::FromHex;
     use risc0_merkle_proof_circuit::{RISC0_MERKLE_PROOF_ELF, RISC0_MERKLE_PROOF_ID};
+    use risc0_storage_proof_circuit::{RISC0_STORAGE_PROOF_ELF, RISC0_STORAGE_PROOF_ID};
     use risc0_zkvm::{default_prover, ExecutorEnv};
     use sp1_sdk::{ProverClient, SP1Stdin};
     use std::{str::FromStr, time::Instant};
@@ -206,6 +207,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_generate_ethereum_storage_zk_proof_risc0() {
+        let start_time = Instant::now();
         let key = load_infura_key_from_env();
         let rpc_url = NODE_RPC_URL.to_string() + &key;
         let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
@@ -228,7 +230,15 @@ mod tests {
             .await,
         )
         .unwrap();
-
-        // todo: commit account hash alongside input
+        let env = ExecutorEnv::builder()
+            .write_slice(&proof_input)
+            .build()
+            .unwrap();
+        let prover = default_prover();
+        let prove_info = prover.prove(env, RISC0_STORAGE_PROOF_ELF).unwrap();
+        let receipt = prove_info.receipt;
+        receipt.verify(RISC0_STORAGE_PROOF_ID).unwrap();
+        let duration = start_time.elapsed();
+        println!("Elapsed time: {:?}", duration);
     }
 }
