@@ -12,6 +12,7 @@ path = "src/bin/main.rs"
 sp1-sdk = "3.4.0"
 risc0-zkvm = "1.2.0"
 risc0-merkle-proof-circuit = { package = "circuit", path = "../circuits/risc0-merkle-proof/merkle-proof-circuit" }
+risc0-storage-proof-circuit = { package = "storage-circuit", path = "../circuits/risc0-storage-proof/storage-proof-circuit" }
 serde_json = { version = "1.0", default-features = false, features = ["alloc"] }
 serde = { version = "1.0.200", default-features = false, features = ["derive"] }
 clap = { version = "4.0", features = ["derive", "env"] }
@@ -20,6 +21,7 @@ hex = "0.4.3"
 crypto-ops = { path = "../crypto-ops" }
 trie-utils = { path = "../trie-utils" }
 tokio = { version = "1.4.11", features = ["full"] }
+alloy = { version = "0.6.4", features = ["full"] }
 alloy-primitives = "0.8"
 alloy-consensus = "0.8"
 borsh = { version = "1.5.3", features = ["derive"] }

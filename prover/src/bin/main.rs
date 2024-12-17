@@ -7,16 +7,25 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use crate::MERKLE_ELF;
-    use alloy_primitives::Address;
+    use alloy::{
+        providers::{Provider, ProviderBuilder},
+        transports::http::reqwest::Url,
+    };
+    use alloy_primitives::{Address, FixedBytes};
     use hex::FromHex;
     use risc0_merkle_proof_circuit::{RISC0_MERKLE_PROOF_ELF, RISC0_MERKLE_PROOF_ID};
     use risc0_zkvm::{default_prover, ExecutorEnv};
     use sp1_sdk::{ProverClient, SP1Stdin};
-    use std::time::Instant;
+    use std::{str::FromStr, time::Instant};
     use trie_utils::{
-        constants::{DEFAULT_BLOCK_HASH, DEFAULT_OPTIMISM_BLOCK_HASH, USDT_CONTRACT_ADDRESS},
+        constants::{
+            DEFAULT_BLOCK_HASH, DEFAULT_OPTIMISM_BLOCK_HASH, DEFAULT_STORAGE_KEY_ETHEREUM,
+            NODE_RPC_URL, USDT_CONTRACT_ADDRESS,
+        },
+        load_infura_key_from_env,
         proofs::{
             account::get_account_proof_inputs,
+            storage::get_storage_proof_inputs,
             transaction::{
                 get_ethereum_transaction_proof_inputs, get_optimism_transaction_proof_inputs,
             },
@@ -193,5 +202,33 @@ mod tests {
         );
         let duration = start_time.elapsed();
         println!("Elapsed time: {:?}", duration);
+    }
+
+    #[tokio::test]
+    async fn test_generate_ethereum_storage_zk_proof_risc0() {
+        let key = load_infura_key_from_env();
+        let rpc_url = NODE_RPC_URL.to_string() + &key;
+        let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
+        let block = provider
+            .get_block(
+                alloy::eips::BlockId::Number(provider.get_block_number().await.unwrap().into()),
+                alloy::rpc::types::BlockTransactionsKind::Full,
+            )
+            .await
+            .unwrap()
+            .unwrap();
+
+        let proof_input = borsh::to_vec(
+            &get_storage_proof_inputs(
+                USDT_CONTRACT_ADDRESS.to_string(),
+                vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_ETHEREUM).unwrap()],
+                NetworkEvm::Ethereum,
+                block.header.state_root.to_vec(),
+            )
+            .await,
+        )
+        .unwrap();
+
+        // todo: commit account hash alongside input
     }
 }

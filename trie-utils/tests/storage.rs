@@ -66,7 +66,7 @@ mod tests {
             hex::encode(&proof.storage_hash)
         );
         let storage_proof = get_storage_proof_inputs(
-            Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
+            USDT_CONTRACT_ADDRESS.to_string(),
             vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_ETHEREUM).unwrap()],
             NetworkEvm::Ethereum,
             block.header.state_root.to_vec(),
@@ -111,7 +111,7 @@ mod tests {
             hex::encode(&proof.storage_hash)
         );
         let storage_proof = get_storage_proof_inputs(
-            Address::from_hex(USDT_CONTRACT_ADDRESS_OPTIMISM).unwrap(),
+            USDT_CONTRACT_ADDRESS_OPTIMISM.to_string(),
             vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_OPTIMISM).unwrap()],
             NetworkEvm::Optimism,
             hex::decode(&block.state_root).unwrap(),
