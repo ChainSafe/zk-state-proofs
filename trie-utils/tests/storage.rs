@@ -66,7 +66,7 @@ mod tests {
             hex::encode(&proof.storage_hash)
         );
         let storage_proof = get_storage_proof_inputs(
-            Address::from_hex(USDT_CONTRACT_ADDRESS).unwrap(),
+            USDT_CONTRACT_ADDRESS.to_string(),
             vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_ETHEREUM).unwrap()],
             NetworkEvm::Ethereum,
             block.header.state_root.to_vec(),
@@ -111,7 +111,7 @@ mod tests {
             hex::encode(&proof.storage_hash)
         );
         let storage_proof = get_storage_proof_inputs(
-            Address::from_hex(USDT_CONTRACT_ADDRESS_OPTIMISM).unwrap(),
+            USDT_CONTRACT_ADDRESS_OPTIMISM.to_string(),
             vec![FixedBytes::from_hex(DEFAULT_STORAGE_KEY_OPTIMISM).unwrap()],
             NetworkEvm::Optimism,
             hex::decode(&block.state_root).unwrap(),
@@ -151,7 +151,7 @@ mod tests {
         let decoded_account: Account = alloy_rlp::decode_exact(&account_proof).unwrap();
         assert_eq!(
             decoded_account.storage_root.encode_hex::<String>(),
-            // strip 0x suffix from response
+            // strip 0x prefix from response
             proof.result.storage_hash[2..]
         );
         let storage_proof = get_storage_proof_inputs_arbitrum(

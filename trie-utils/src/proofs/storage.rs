@@ -10,11 +10,11 @@ use crate::{
     types::NetworkEvm,
 };
 use alloy::{
-    hex,
+    hex::{self, FromHex, ToHex},
     primitives::{Address, FixedBytes},
     providers::{Provider, ProviderBuilder},
 };
-use crypto_ops::{keccak::digest_keccak, types::MerkleProofListInput};
+use crypto_ops::{keccak::digest_keccak, types::StorageProofInput};
 use reqwest::Client;
 use std::{io::Read, str::FromStr};
 use url::Url;
@@ -22,11 +22,12 @@ use url::Url;
 use super::arbitrum::client::ArbitrumClient;
 
 pub async fn get_storage_proof_inputs(
-    address: Address,
+    address_hex: String,
     keys: Vec<FixedBytes<32>>,
     network: NetworkEvm,
     root_hash: Vec<u8>,
-) -> MerkleProofListInput {
+) -> StorageProofInput {
+    let address_object = Address::from_hex(&address_hex).unwrap();
     let rpc_url: String = match network {
         NetworkEvm::Ethereum => {
             let key = load_infura_key_from_env();
@@ -37,11 +38,11 @@ pub async fn get_storage_proof_inputs(
     };
     let provider = ProviderBuilder::new().on_http(Url::from_str(&rpc_url).unwrap());
     let proof = provider
-        .get_proof(address, keys)
+        .get_proof(address_object, keys)
         .await
         .expect("Failed to get proof!");
 
-    MerkleProofListInput {
+    StorageProofInput {
         account_proof: proof
             .account_proof
             .into_iter()
@@ -54,8 +55,13 @@ pub async fn get_storage_proof_inputs(
             .map(|p| p.proof.into_iter().map(|b| b.to_vec()).collect())
             .collect(),
         root_hash,
-        account_key: digest_keccak(&address.bytes().collect::<Result<Vec<u8>, _>>().unwrap())
-            .to_vec(),
+        account_key: digest_keccak(
+            &address_object
+                .bytes()
+                .collect::<Result<Vec<u8>, _>>()
+                .unwrap(),
+        )
+        .to_vec(),
         storage_keys: proof
             .storage_proof
             .iter()
@@ -68,6 +74,7 @@ pub async fn get_storage_proof_inputs(
                     .unwrap()
             })
             .collect(),
+        address_keccak: digest_keccak(&hex::decode(&address_hex).unwrap()),
     }
 }
 
@@ -75,13 +82,13 @@ pub async fn get_storage_proof_inputs_arbitrum(
     address_hex: String,
     keys: Vec<String>,
     root_hash: Vec<u8>,
-) -> MerkleProofListInput {
+) -> StorageProofInput {
     let reqwest_client: Client = Client::new();
     let arb_client: ArbitrumClient =
         ArbitrumClient::new(ARBITRUM_ONE_RPC_URL.to_string(), reqwest_client);
     let proof = arb_client.get_proof(&address_hex, keys).await;
     let proof_result = proof.result;
-    MerkleProofListInput {
+    StorageProofInput {
         account_proof: proof_result
             .account_proof
             .into_iter()
@@ -109,5 +116,6 @@ pub async fn get_storage_proof_inputs_arbitrum(
             .cloned()
             .map(|p| hex::decode(p.key).unwrap())
             .collect(),
+        address_keccak: digest_keccak(&hex::decode(address_hex).unwrap()),
     }
 }

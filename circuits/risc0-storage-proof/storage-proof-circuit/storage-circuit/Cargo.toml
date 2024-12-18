@@ -1,5 +1,5 @@
 [package]
-name = "risc0-merkle-proof"
+name = "risc0-storage-proof"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,6 +9,10 @@ edition = "2021"
 risc0-zkvm = { version = "1.2.0", default-features = false, features = ['std'] }
 crypto-ops = { path = "../../../../crypto-ops" }
 borsh = { version = "1.5.3", features = ["derive"] }
+alloy-rlp = { version = "0.3.9" }
+alloy-consensus = "0.8.1"
+
+
 [features]
 metal = ["risc0-zkvm/metal"]
 cuda = ["risc0-zkvm/cuda"]
