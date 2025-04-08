@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 dotenv = "0.15.0"
-tokio = { version = "1.4.11", features = ["full"] }
+tokio = { version = "1.43.1", features = ["full"] }
 eth_trie = "0.5.0"
 crypto-ops = { path = "../crypto-ops" }
 keccak-hash = "0.10.0"
